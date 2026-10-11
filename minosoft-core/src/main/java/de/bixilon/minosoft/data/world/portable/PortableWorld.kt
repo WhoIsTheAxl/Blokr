@@ -110,6 +110,46 @@ class PortableWorld {
         sections.putAll(replacements)
     }
 
+    /** Immutable update request. Later updates to the same block win. */
+    data class BlockUpdate(val x: Int, val y: Int, val z: Int, val stateId: Int)
+
+    /**
+     * Applies an ordered group of block updates under one lock. All inputs are
+     * validated before the first mutation, so invalid batches leave the world unchanged.
+     */
+    @Synchronized
+    fun applyBlockUpdates(updates: Collection<BlockUpdate>) {
+        updates.forEach {
+            require(it.y >= ChunkSize.CHUNK_MIN_Y && it.y < ChunkSize.CHUNK_MAX_Y) {
+                "Y outside supported chunk range"
+            }
+            require(it.stateId >= 0) { "Block state ID must be nonnegative" }
+        }
+        updates.forEach { setBlock(it.x, it.y, it.z, it.stateId) }
+    }
+
+    /** Defensive snapshot of populated sections in one chunk column. */
+    @Synchronized
+    fun chunkSnapshot(chunkX: Int, chunkZ: Int): Map<Int, IntArray> {
+        val result = LinkedHashMap<Int, IntArray>()
+        for (sectionY in chunkSectionYs(chunkX, chunkZ).sorted()) {
+            result[sectionY] = sectionSnapshot(chunkX, sectionY, chunkZ)
+        }
+        return result
+    }
+
+    /** Number of chunk columns containing at least one non-air block. */
+    @Synchronized
+    fun loadedChunks(): Int =
+        sections.keys.mapTo(HashSet()) { Pair(it.x, it.z) }.size
+
+    /** Returns all populated chunk columns without exposing mutable world state. */
+    @Synchronized
+    fun chunkPositions(): Set<ChunkPosition> =
+        sections.keys.mapTo(LinkedHashSet()) { ChunkPosition(it.x, it.z) }
+
+    data class ChunkPosition(val x: Int, val z: Int)
+
     @Synchronized
     fun loadedSections(): Int = sections.size
 
