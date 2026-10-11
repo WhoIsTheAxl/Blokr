@@ -9,6 +9,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.ScrollView;
+import android.os.SystemClock;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
@@ -47,6 +49,7 @@ public final class MainActivity extends Activity {
             + "; flags=" + (launchIntent == null ? "null" : Integer.toHexString(launchIntent.getFlags()))
             + "; categories=" + (launchIntent == null ? "null" : launchIntent.getCategories()));
 
+        Diagnostics.info("StartupStage", "01 creating launcher layout");
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setGravity(Gravity.CENTER);
@@ -62,48 +65,10 @@ public final class MainActivity extends Activity {
         layout.addView(logo, logoParams);
 
         TextView status = new TextView(this);
-        String protocolStatus = AndroidProtocolProbe.check();
-        Diagnostics.info("MinosoftProtocol", protocolStatus);
-        String framingStatus;
-        try {
-            framingStatus = AndroidPacketFraming.selfTest();
-            Diagnostics.info("PacketFraming", framingStatus);
-        } catch (Exception failure) {
-            framingStatus = "Packet framing: FAIL (" + failure.getClass().getSimpleName() + ")";
-            Diagnostics.warn("PacketFraming", framingStatus);
-        }
-        String nettyStatus;
-        try {
-            nettyStatus = AndroidNettyFramingProbe.check();
-            Diagnostics.info("NettyPipeline", nettyStatus);
-        } catch (Throwable failure) {
-            nettyStatus = "Netty packet pipeline: FAIL (" + failure.getClass().getSimpleName() + ")";
-            Diagnostics.warn("NettyPipeline", nettyStatus);
-        }
-        String primitiveStatus;
-        try {
-            primitiveStatus = AndroidPrimitiveBufferProbe.check();
-            Diagnostics.info("PrimitiveBuffers", primitiveStatus);
-        } catch (Throwable failure) {
-            primitiveStatus = "Primitive buffers: FAIL (" + failure.getClass().getSimpleName() + ")";
-            Diagnostics.warn("PrimitiveBuffers", primitiveStatus);
-        }
-        String kutilStatus;
-        try {
-            kutilStatus = KUtilBufferProbe.check();
-            Diagnostics.info("KUtilBuffers", kutilStatus);
-        } catch (Throwable failure) {
-            kutilStatus = "Original KUtil buffers: FAIL (" + failure.getClass().getSimpleName() + ")";
-            Diagnostics.warn("KUtilBuffers", kutilStatus);
-        }
         status.setText("Blokr\nAndroid bootstrap ready\nMinosoft: "
             + MinosoftBridge.getInstance().getState()
-            + "\n" + MinosoftCoreProbe.check()
-            + "\n" + protocolStatus
-            + "\n" + framingStatus
-            + "\n" + nettyStatus
-            + "\n" + primitiveStatus
-            + "\n" + kutilStatus);
+            + "\nProtocol diagnostics: running in background...");
+        Diagnostics.info("StartupStage", "02 status view initialized; probes deferred");
         status.setTextSize(22);
         status.setGravity(Gravity.CENTER);
         layout.addView(status);
@@ -162,9 +127,77 @@ public final class MainActivity extends Activity {
             }, "Blokr-TCP-Probe").start();
         });
         layout.addView(connect);
-        Diagnostics.info("StartupStage", "Before setContentView");
-        setContentView(layout);
-        Diagnostics.info("StartupStage", "After setContentView; launcher visible");
+        Diagnostics.info("StartupStage", "03 controls created; attaching scroll container");
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(true);
+        scroll.addView(layout);
+        Diagnostics.info("StartupStage", "04 before setContentView");
+        setContentView(scroll);
+        Diagnostics.info("StartupStage", "05 after setContentView");
+        startProtocolDiagnostics(status);
+    }
+
+    private void startProtocolDiagnostics(TextView status) {
+        Diagnostics.info("StartupStage", "06 scheduling background protocol diagnostics");
+        new Thread(() -> {
+            long started = SystemClock.elapsedRealtime();
+            Diagnostics.info("StartupStage", "07 protocol diagnostics worker started");
+            StringBuilder report = new StringBuilder("Blokr\nAndroid bootstrap ready\nMinosoft: ")
+                .append(MinosoftBridge.getInstance().getState());
+            try {
+                Diagnostics.info("ProbeStage", "01 protocol begin");
+                String result = AndroidProtocolProbe.check();
+                Diagnostics.info("MinosoftProtocol", result);
+                report.append("\n").append(result);
+            } catch (Throwable failure) {
+                Diagnostics.error("MinosoftProtocol", "Protocol probe failed", failure);
+                report.append("\nProtocol: FAIL");
+            }
+            try {
+                Diagnostics.info("ProbeStage", "02 framing begin");
+                String result = AndroidPacketFraming.selfTest();
+                Diagnostics.info("PacketFraming", result);
+                report.append("\n").append(result);
+            } catch (Throwable failure) {
+                Diagnostics.error("PacketFraming", "Framing probe failed", failure);
+                report.append("\nPacket framing: FAIL");
+            }
+            try {
+                Diagnostics.info("ProbeStage", "03 Netty begin");
+                String result = AndroidNettyFramingProbe.check();
+                Diagnostics.info("NettyPipeline", result);
+                report.append("\n").append(result);
+            } catch (Throwable failure) {
+                Diagnostics.error("NettyPipeline", "Netty probe failed", failure);
+                report.append("\nNetty pipeline: FAIL");
+            }
+            try {
+                Diagnostics.info("ProbeStage", "04 primitive begin");
+                String result = AndroidPrimitiveBufferProbe.check();
+                Diagnostics.info("PrimitiveBuffers", result);
+                report.append("\n").append(result);
+            } catch (Throwable failure) {
+                Diagnostics.error("PrimitiveBuffers", "Primitive probe failed", failure);
+                report.append("\nPrimitive buffers: FAIL");
+            }
+            try {
+                Diagnostics.info("ProbeStage", "05 KUtil begin");
+                String result = KUtilBufferProbe.check();
+                Diagnostics.info("KUtilBuffers", result);
+                report.append("\n").append(result);
+            } catch (Throwable failure) {
+                Diagnostics.error("KUtilBuffers", "KUtil probe failed", failure);
+                report.append("\nKUtil buffers: FAIL");
+            }
+            Diagnostics.info("ProbeStage", "06 all probes completed; elapsedMs="
+                + (SystemClock.elapsedRealtime() - started));
+            String display = report.toString();
+            runOnUiThread(() -> {
+                Diagnostics.info("StartupStage", "08 updating diagnostics UI");
+                if (!isFinishing() && !isDestroyed()) status.setText(display);
+                Diagnostics.info("StartupStage", "09 diagnostics UI update completed");
+            });
+        }, "Blokr-Protocol-Diagnostics").start();
     }
 
     @Override protected void onStart() {
