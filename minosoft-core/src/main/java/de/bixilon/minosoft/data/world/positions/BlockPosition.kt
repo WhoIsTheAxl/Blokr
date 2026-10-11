@@ -67,7 +67,7 @@ value class BlockPosition(val raw: Long) {
         fun of(chunk: ChunkPosition, inChunk: InChunkPosition) =
             BlockPosition((chunk.x shl 4) or inChunk.x, inChunk.y, (chunk.z shl 4) or inChunk.z)
         fun of(section: SectionPosition, inSection: InSectionPosition) =
-            BlockPosition((section.x shl 4) or inSection.x, (section.y shl 4) or inSection.z)
+            BlockPosition((section.x shl 4) or inSection.x, (section.y shl 4) or inSection.y, (section.z shl 4) or inSection.z)
         fun of(section: SectionPosition) =
             BlockPosition(section.x shl 4, section.y shl 4, section.z shl 4)
         fun of(chunk: ChunkPosition, sectionHeight: Int) =
