@@ -11,10 +11,12 @@
  * This software is not affiliated with Mojang AB, the original developer of Minecraft.
  */
 
-rootProject.name = "minosoft"
+rootProject.name = "Blokr"
+include(":app")
 
 pluginManagement {
     repositories {
+        google()
         gradlePluginPortal()
         mavenCentral()
     }
