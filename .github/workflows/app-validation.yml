@@ -1,0 +1,104 @@
+name: Blokr automated app validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-validation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: JVM core tests and debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@v4
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Run core unit tests
+        run: bash ./gradlew :minosoft-core:testDebugUnitTest --stacktrace
+      - name: Build app and instrumentation APKs
+        run: bash ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
+      - name: Upload unit test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blokr-jvm-test-reports
+          path: |
+            minosoft-core/build/reports/tests/
+            minosoft-core/build/test-results/
+          if-no-files-found: warn
+      - name: Upload tested APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: blokr-test-apks
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/androidTest/debug/*.apk
+          if-no-files-found: error
+
+  emulator:
+    name: Android ${{ matrix.api-level }} startup smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [29, 35]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - uses: android-actions/setup-android@v4
+      - name: Enable KVM access
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Launch emulator and run instrumentation tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: |
+            adb shell settings put global window_animation_scale 0
+            bash ./gradlew :app:connectedDebugAndroidTest --stacktrace
+      - name: Collect test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blokr-android-${{ matrix.api-level }}-reports
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+          if-no-files-found: warn
+      - name: Capture emulator logs on failure
+        if: failure()
+        run: adb logcat -d -v time > emulator-logcat.txt || true
+      - name: Upload emulator logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blokr-android-${{ matrix.api-level }}-logcat
+          path: emulator-logcat.txt
+          if-no-files-found: ignore
