@@ -17,6 +17,7 @@ import com.blokr.app.bridge.MinosoftBridge;
 import com.blokr.app.bridge.MinosoftCoreProbe;
 import com.blokr.app.diagnostic.Diagnostics;
 import de.bixilon.minosoft.protocol.AndroidProtocolProbe;
+import de.bixilon.minosoft.protocol.network.AndroidPacketFraming;
 import com.blokr.app.view.activities.GameActivity;
 
 /** Android launcher for the bridge and graphics bootstrap. */
@@ -43,10 +44,19 @@ public final class MainActivity extends Activity {
         TextView status = new TextView(this);
         String protocolStatus = AndroidProtocolProbe.check();
         Diagnostics.info("MinosoftProtocol", protocolStatus);
+        String framingStatus;
+        try {
+            framingStatus = AndroidPacketFraming.selfTest();
+            Diagnostics.info("PacketFraming", framingStatus);
+        } catch (Exception failure) {
+            framingStatus = "Packet framing: FAIL (" + failure.getClass().getSimpleName() + ")";
+            Diagnostics.warn("PacketFraming", framingStatus);
+        }
         status.setText("Blokr\nAndroid bootstrap ready\nMinosoft: "
             + MinosoftBridge.getInstance().getState()
             + "\n" + MinosoftCoreProbe.check()
-            + "\n" + protocolStatus);
+            + "\n" + protocolStatus
+            + "\n" + framingStatus);
         status.setTextSize(22);
         status.setGravity(Gravity.CENTER);
         layout.addView(status);
