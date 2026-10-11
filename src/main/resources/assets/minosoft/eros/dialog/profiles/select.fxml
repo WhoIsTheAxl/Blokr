@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~ Minosoft
+  ~ Copyright (C) 2020-2023 Moritz Zwerger
+  ~
+  ~ This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+  ~
+  ~ This software is not affiliated with Mojang AB, the original developer of Minecraft.
+  -->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.text.TextFlow?>
+<VBox xmlns:fx="http://javafx.com/fxml/1" fx:id="root" prefHeight="300.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/17">
+    <GridPane VBox.vgrow="ALWAYS">
+        <columnConstraints>
+            <ColumnConstraints hgrow="ALWAYS"/>
+        </columnConstraints>
+        <rowConstraints>
+            <RowConstraints valignment="CENTER" vgrow="NEVER"/>
+            <RowConstraints vgrow="ALWAYS"/>
+            <RowConstraints vgrow="NEVER"/>
+        </rowConstraints>
+        <VBox.margin>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+        </VBox.margin>
+
+        <TextFlow fx:id="headerFX" textAlignment="CENTER">
+            <Text text="Select your profiles"/>
+        </TextFlow>
+
+        <TableView fx:id="profilesFX" editable="true" GridPane.hgrow="ALWAYS" GridPane.rowIndex="1">
+            <columns>
+                <TableColumn fx:id="typeColumnFX" minWidth="220.0" prefWidth="220.0" sortable="false" reorderable="false" text="Type"/>
+                <TableColumn fx:id="profileColumnFX" maxWidth="Infinity" minWidth="-1.0" prefWidth="-1.0" sortable="false" reorderable="false" text="Profile"/>
+            </columns>
+            <GridPane.margin>
+                <Insets bottom="5.0" left="5.0" right="5.0" top="5.0"/>
+            </GridPane.margin>
+            <columnResizePolicy>
+                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+            </columnResizePolicy>
+        </TableView>
+
+        <GridPane GridPane.rowIndex="2">
+            <columnConstraints>
+                <ColumnConstraints hgrow="ALWAYS"/>
+                <ColumnConstraints hgrow="NEVER"/>
+                <ColumnConstraints hgrow="NEVER"/>
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints vgrow="NEVER"/>
+            </rowConstraints>
+            <Button fx:id="cancelButtonFX" cancelButton="true" onAction="#cancel" text="Cancel" GridPane.columnIndex="1">
+                <GridPane.margin>
+                    <Insets left="5.0" right="5.0"/>
+                </GridPane.margin>
+            </Button>
+            <Button fx:id="confirmButtonFX" defaultButton="true" onAction="#confirm" text="Confirm" GridPane.columnIndex="2">
+                <GridPane.margin>
+                    <Insets left="5.0" right="5.0"/>
+                </GridPane.margin>
+            </Button>
+        </GridPane>
+    </GridPane>
+</VBox>

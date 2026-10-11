@@ -1,0 +1,145 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2025 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+package de.bixilon.minosoft.data.registries.fluid.fluids
+
+import de.bixilon.kmath.vec.vec3.d.Vec3d
+import de.bixilon.kutil.random.RandomUtil.chance
+import de.bixilon.minosoft.data.registries.blocks.state.BlockState
+import de.bixilon.minosoft.data.registries.blocks.state.BlockStateFlags
+import de.bixilon.minosoft.data.registries.effects.movement.MovementEffect
+import de.bixilon.minosoft.data.registries.enchantment.armor.MovementEnchantment
+import de.bixilon.minosoft.data.registries.fluid.Fluid
+import de.bixilon.minosoft.data.registries.fluid.FluidFactory
+import de.bixilon.minosoft.data.registries.fluid.handler.FluidCollisionHandler
+import de.bixilon.minosoft.data.registries.fluid.handler.FluidEnterHandler
+import de.bixilon.minosoft.data.registries.identified.AliasedIdentified
+import de.bixilon.minosoft.data.registries.identified.Namespaces.minecraft
+import de.bixilon.minosoft.data.registries.identified.ResourceLocation
+import de.bixilon.minosoft.data.registries.registries.Registries
+import de.bixilon.minosoft.data.world.World
+import de.bixilon.minosoft.data.world.positions.BlockPosition
+import de.bixilon.minosoft.gui.rendering.camera.fog.FogOptions
+import de.bixilon.minosoft.gui.rendering.camera.fog.FoggedFluid
+import de.bixilon.minosoft.gui.rendering.models.fluid.fluids.WaterFluidModel
+import de.bixilon.minosoft.gui.rendering.particle.types.render.texture.simple.water.UnderwaterParticle
+import de.bixilon.minosoft.gui.rendering.tint.TintedBlock
+import de.bixilon.minosoft.gui.rendering.tint.tints.fluid.WaterTintProvider
+import de.bixilon.minosoft.physics.EntityPositionInfo
+import de.bixilon.minosoft.physics.entities.EntityPhysics
+import de.bixilon.minosoft.physics.entities.living.LivingEntityPhysics
+import de.bixilon.minosoft.physics.input.MovementInput
+import de.bixilon.minosoft.physics.parts.climbing.ClimbingPhysics
+import de.bixilon.minosoft.physics.parts.climbing.ClimbingPhysics.isClimbing
+import de.bixilon.minosoft.physics.parts.input.InputPhysics.applyMovementInput
+import de.bixilon.minosoft.protocol.network.session.play.PlaySession
+import java.util.*
+
+class WaterFluid(identifier: ResourceLocation = Companion.identifier) : Fluid(identifier), FluidEnterHandler, FluidCollisionHandler, TintedBlock, FoggedFluid {
+    override val priority: Int get() = 0
+    override val tintProvider get() = WaterTintProvider
+
+    override fun getVelocityMultiplier(session: PlaySession) = 0.014
+
+    override fun matches(other: Fluid): Boolean {
+        return other is WaterFluid
+    }
+
+    override fun matches(other: BlockState?): Boolean {
+        if (other == null) return false
+        if (super.matches(other)) return true
+        return other.isWaterlogged()
+    }
+
+    override fun getHeight(state: BlockState?): Float {
+        if (state == null) return 0.0f
+        if (state.isWaterlogged()) return MAX_LEVEL
+        val `super` = super.getHeight(state)
+        if (`super` != 0.0f) {
+            return `super`
+        }
+        return 0.0f
+    }
+
+    override fun randomTick(session: PlaySession, blockState: BlockState, blockPosition: BlockPosition, random: Random) {
+        super.randomTick(session, blockState, blockPosition, random)
+
+        val particle = session.world.particle ?: return
+
+        // ToDo: if not sill and not falling
+        if (random.chance(10)) {
+            particle += UnderwaterParticle(session, Vec3d(blockPosition.x + random.nextDouble(), blockPosition.y + random.nextDouble(), blockPosition.z + random.nextDouble()))
+        }
+    }
+
+    override fun createModel() = WaterFluidModel()
+
+    override fun travel(physics: LivingEntityPhysics<*>, input: MovementInput, gravity: Double, falling: Boolean) {
+        val y = physics.position.y
+        var friction = if (physics.entity.isSprinting) 0.9f else 0.8f
+
+        var speed = 0.02f
+        var depthStrider = minOf(physics.entity.equipment[MovementEnchantment.DepthStrider].toFloat(), 3.0f)
+
+        if (!physics.onGround) {
+            depthStrider *= 0.5f
+        }
+
+        if (depthStrider > 0.0f) {
+            friction += (0.54600006f - friction) * depthStrider / 3.0f
+            speed += (physics.movementSpeed - speed) * depthStrider / 3.0f
+        }
+
+        if (physics.entity.effects[MovementEffect.DolphinsGrace] != null) {
+            friction = 0.96f
+        }
+
+        physics.applyMovementInput(input, speed)
+        physics.move(physics.velocity.unsafe)
+
+        physics.floatUp()
+
+        physics.applyFriction(friction.toDouble())
+
+        physics.applyFluidMovingSpeed(gravity, falling, physics.velocity.unsafe)
+
+        physics.applyBouncing(y)
+    }
+
+    private fun LivingEntityPhysics<*>.floatUp() {
+        if (!horizontalCollision || !isClimbing()) return
+        this.velocity.y = ClimbingPhysics.UPWARDS
+    }
+
+    override fun onCollision(physics: EntityPhysics<*>, height: Double) {
+        // physics.fireTicks = 0
+        physics.fallDistance = 0.0f
+    }
+
+    override fun onEnter(physics: EntityPhysics<*>, height: Double) {
+        onCollision(physics, height)
+    }
+
+    override fun getFogOptions(world: World, position: EntityPositionInfo): FogOptions {
+        return FogOptions(start = 5.0f, end = 10.0f, color = position.biome?.waterFogColor)
+    }
+
+    companion object : FluidFactory<WaterFluid>, AliasedIdentified {
+        override val identifier = minecraft("water")
+        override val identifiers = setOf(minecraft("flowing_water"))
+
+        override fun build(identifier: ResourceLocation, registries: Registries) = WaterFluid()
+
+        fun BlockState.isWaterlogged() = BlockStateFlags.WATERLOGGED in this.flags
+    }
+}

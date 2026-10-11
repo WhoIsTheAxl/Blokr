@@ -1,0 +1,73 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2025 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+package de.bixilon.minosoft.gui.rendering.gui.gui.screen.container.processing.smelting
+
+import de.bixilon.kmath.vec.vec2.f.Vec2f
+import de.bixilon.kutil.math.interpolation.FloatInterpolation.interpolateLinear
+import de.bixilon.minosoft.data.container.types.processing.smelting.SmeltingContainer
+import de.bixilon.minosoft.gui.rendering.gui.GUIRenderer
+import de.bixilon.minosoft.gui.rendering.gui.atlas.Atlas
+import de.bixilon.minosoft.gui.rendering.gui.atlas.AtlasElement
+import de.bixilon.minosoft.gui.rendering.gui.elements.Pollable
+import de.bixilon.minosoft.gui.rendering.gui.elements.primitive.AtlasImageElement
+import de.bixilon.minosoft.gui.rendering.gui.gui.screen.container.processing.ProcessingContainerScreen
+import de.bixilon.minosoft.gui.rendering.gui.mesh.GUIVertexOptions
+import de.bixilon.minosoft.gui.rendering.gui.mesh.consumer.GuiVertexConsumer
+
+abstract class SmeltingContainerScreen<C : SmeltingContainer>(
+    guiRenderer: GUIRenderer,
+    container: C,
+    atlas: Atlas?,
+) : ProcessingContainerScreen<C>(guiRenderer, container, atlas?.get("container")), Pollable {
+    protected val fuelAtlasElement: AtlasElement? = atlas?.get("fuel")
+    protected val processAtlasElement: AtlasElement? = atlas?.get("process")
+    private val fuelArea = atlasElement?.areas?.get("fuel")
+    private val processArea = atlasElement?.areas?.get("progress")
+    private var fuel = 0.0f
+    private var process = 0.0f
+
+    override fun forceRenderContainerScreen(offset: Vec2f, consumer: GuiVertexConsumer, options: GUIVertexOptions?) {
+        super.forceRenderContainerScreen(offset, consumer, options)
+
+        if (fuelArea != null) {
+            val fuelImage = AtlasImageElement(guiRenderer, fuelAtlasElement, size = fuelArea.size)
+            val fuel = fuel
+            fuelImage.prefMaxSize = Vec2f(fuelImage.prefMaxSize.x, (fuelImage.size.y * fuel))
+            fuelImage.uvStart = Vec2f(fuelAtlasElement?.uvStart?.x ?: 0.0f, interpolateLinear(1.0f - fuel, fuelAtlasElement?.uvStart?.y ?: 0.0f, fuelAtlasElement?.uvEnd?.y ?: 0.0f))
+            fuelImage.render(offset + fuelArea.start + Vec2f(0.0f, fuelArea.size.y - fuelImage.size.y), consumer, options)
+        }
+        if (processArea != null) {
+            val process = process
+            val processImage = AtlasImageElement(guiRenderer, processAtlasElement, size = processArea.size)
+            processImage.prefMaxSize = Vec2f((processImage.size.x * process), processImage.prefMaxSize.y)
+            processImage.uvEnd = Vec2f(interpolateLinear(process, processAtlasElement?.uvStart?.x ?: 0.0f, processAtlasElement?.uvEnd?.x ?: 0.0f), processAtlasElement?.uvEnd?.y ?: 0.0f)
+            processImage.render(offset + processArea.start, consumer, options)
+        }
+    }
+
+    override fun poll(): Boolean {
+        val fuel = container.fuel.toFloat() / maxOf(1, container.maxFuel)
+        val process = container.processTime.toFloat() / maxOf(1, container.maxProcessTime)
+        if (fuel != this.fuel || this.process != process) {
+            this.fuel = fuel
+            this.process = process
+            return true
+        }
+        return false
+    }
+
+    override fun forceSilentApply() {
+        cacheUpToDate = false
+    }
+}

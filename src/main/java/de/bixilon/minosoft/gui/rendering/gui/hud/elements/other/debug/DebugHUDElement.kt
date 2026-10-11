@@ -1,0 +1,342 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2026 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+package de.bixilon.minosoft.gui.rendering.gui.hud.elements.other.debug
+
+import de.bixilon.kmath.vec.vec2.f.Vec2f
+import de.bixilon.kmath.vec.vec2.i.Vec2i
+import de.bixilon.kmath.vec.vec4.f.Vec4f
+import de.bixilon.kutil.concurrent.Reference
+import de.bixilon.kutil.math.simple.DoubleMath.rounded10
+import de.bixilon.kutil.math.simple.FloatMath.rounded10
+import de.bixilon.kutil.observer.DataObserver.Companion.observe
+import de.bixilon.kutil.string.StringUtil.truncate
+import de.bixilon.kutil.unit.Bytes.Companion.bytes
+import de.bixilon.kutil.unit.UnitFormatter.format
+import de.bixilon.minosoft.config.key.KeyActions
+import de.bixilon.minosoft.config.key.KeyBinding
+import de.bixilon.minosoft.config.key.KeyCodes
+import de.bixilon.minosoft.data.direction.Directions
+import de.bixilon.minosoft.data.registries.identified.Namespaces.minosoft
+import de.bixilon.minosoft.data.text.BaseComponent
+import de.bixilon.minosoft.data.text.TextComponent
+import de.bixilon.minosoft.data.text.formatting.color.ChatColors
+import de.bixilon.minosoft.data.world.chunk.chunk.Chunk
+import de.bixilon.minosoft.gui.rendering.chunk.ChunkRenderer
+import de.bixilon.minosoft.gui.rendering.entities.EntitiesRenderer
+import de.bixilon.minosoft.gui.rendering.font.renderer.element.TextRenderProperties
+import de.bixilon.minosoft.gui.rendering.gui.GUIRenderer
+import de.bixilon.minosoft.gui.rendering.gui.elements.Element
+import de.bixilon.minosoft.gui.rendering.gui.elements.HorizontalAlignments
+import de.bixilon.minosoft.gui.rendering.gui.elements.LayoutedElement
+import de.bixilon.minosoft.gui.rendering.gui.elements.layout.RowLayout
+import de.bixilon.minosoft.gui.rendering.gui.elements.layout.grid.GridGrow
+import de.bixilon.minosoft.gui.rendering.gui.elements.layout.grid.GridLayout
+import de.bixilon.minosoft.gui.rendering.gui.elements.spacer.LineSpacerElement
+import de.bixilon.minosoft.gui.rendering.gui.elements.text.AutoTextElement
+import de.bixilon.minosoft.gui.rendering.gui.elements.text.TextElement
+import de.bixilon.minosoft.gui.rendering.gui.gui.LayoutedGUIElement
+import de.bixilon.minosoft.gui.rendering.gui.hud.elements.HUDBuilder
+import de.bixilon.minosoft.gui.rendering.gui.mesh.GUIVertexOptions
+import de.bixilon.minosoft.gui.rendering.gui.mesh.consumer.GuiVertexConsumer
+import de.bixilon.minosoft.gui.rendering.particle.ParticleRenderer
+import de.bixilon.minosoft.gui.rendering.util.vec.vec3.Vec3dUtil.blockPosition
+import de.bixilon.minosoft.properties.MinosoftProperties
+import de.bixilon.minosoft.properties.MinosoftPropertiesLoader
+import de.bixilon.minosoft.protocol.network.session.play.tick.Ticks.Companion.ticks
+import de.bixilon.minosoft.terminal.RunConfiguration
+import de.bixilon.minosoft.util.Initializable
+import de.bixilon.minosoft.util.KUtil.format
+import de.bixilon.minosoft.util.SystemInformation
+
+class DebugHUDElement(guiRenderer: GUIRenderer) : Element(guiRenderer), LayoutedElement, Initializable {
+    private val session = context.session
+    private val layout = GridLayout(guiRenderer, Vec2i(3, 1)).apply { parent = this@DebugHUDElement }
+    override val layoutOffset: Vec2f = Vec2f.EMPTY
+
+
+    init {
+        layout.columnConstraints[0].apply {
+            grow = GridGrow.NEVER
+        }
+        layout.columnConstraints[2].apply {
+            grow = GridGrow.NEVER
+            alignment = HorizontalAlignments.RIGHT
+        }
+
+        apply()
+    }
+
+
+    override fun postInit() {
+        layout[Vec2i(0, 0)] = initLeft()
+        layout[Vec2i(2, 0)] = initRight()
+
+        this.prefMaxSize = Vec2f(-1.0f, Float.MAX_VALUE)
+        this.ignoreDisplaySize = true
+    }
+
+    private fun initLeft(): Element {
+        val layout = RowLayout(guiRenderer)
+        layout.margin = Vec4f(2)
+        layout += TextElement(guiRenderer, TextComponent(RunConfiguration.APPLICATION_NAME, ChatColors.RED))
+        layout += AutoTextElement(guiRenderer) { "FPS §d${context.renderStats.smoothAvgFPS.rounded10}§r, t=§d${context.renderStats.avgDrawTime.avg.format().replace('µ', 'u')}" } // rendering of µ eventually broken
+        context.renderer[ChunkRenderer]?.apply {
+            layout += AutoTextElement(guiRenderer) { "C v=${visibility.meshes.sizeString}, l=${loaded.size.format()}, cq=${culledQueue.size.format()}, m=${meshingQueue.size.format()}, mqt=${meshingQueue.tasks.size.format()}/${meshingQueue.tasks.max.format()}, lq=${loadingQueue.size.format()}/${loadingQueue.max.format()}, w=${session.world.chunks.chunks.size.format()} u=§a+${loadingQueue.updates.format()}|§c-${unloadingQueue.updates.format()}" }
+        }
+
+        layout += context.renderer[EntitiesRenderer]?.let {
+            AutoTextElement(guiRenderer) { BaseComponent("E v=", it.drawer.size, ", t=", it.renderers.size, ", w=", session.world.entities.size) }
+        } ?: AutoTextElement(guiRenderer) { "E w=${session.world.entities.size.format()}" }
+
+        context.renderer[ParticleRenderer]?.apply {
+            layout += AutoTextElement(guiRenderer) { "P t=${size.format()}" }
+        }
+
+        val audioProfile = session.profiles.audio
+
+        layout += AutoTextElement(guiRenderer) {
+            BaseComponent().apply {
+                this += "S "
+                if (session.profiles.audio.skipLoading || !audioProfile.enabled) {
+                    this += "§cdisabled"
+                } else {
+                    val audioPlayer = context.rendering.audioPlayer
+
+                    val sources = audioPlayer.sourcesCount
+
+                    this += sources - audioPlayer.availableSources
+                    this += " / "
+                    this += sources
+                }
+            }
+        }
+
+        layout += LineSpacerElement(guiRenderer)
+
+        layout += TextElement(guiRenderer, BaseComponent("Account ", session.account.username))
+        layout += TextElement(guiRenderer, BaseComponent("Address ", session.connection.identifier))
+        layout += TextElement(guiRenderer, BaseComponent("Network version ", session.version))
+        layout += TextElement(guiRenderer, BaseComponent("Server brand ", session.serverInfo.brand)).apply { session.serverInfo::brand.observe(this@DebugHUDElement) { this.text = BaseComponent("Server brand ", it.truncate(50)) } }
+
+        layout += LineSpacerElement(guiRenderer)
+
+
+        session.camera.entity.physics.apply {
+            // ToDo: Only update when the position changes
+            layout += AutoTextElement(guiRenderer) { with(position) { "XYZ ${x.format()} / ${y.format()} / ${z.format()}" } }
+            layout += AutoTextElement(guiRenderer) { with(positionInfo.position) { "Block ${x.format()} ${y.format()} ${z.format()}" } }
+            layout += AutoTextElement(guiRenderer) { with(positionInfo) { "Chunk ${position.inSectionPosition.format()} in (${chunkPosition.x.format()} ${position.sectionHeight.format()} ${chunkPosition.z.format()})" } }
+            layout += AutoTextElement(guiRenderer) {
+                val text = BaseComponent("Facing ")
+
+                Directions.byDirection(rotation.front).apply {
+                    text += TextComponent(name.lowercase()).color(ChatColors.YELLOW)
+                    text += " "
+                    text += vector
+                }
+
+                rotation.apply {
+                    text += " yaw=§d${yaw.rounded10}§r, pitch=§d${pitch.rounded10}"
+                }
+
+                text
+            }
+        }
+
+        layout += LineSpacerElement(guiRenderer)
+
+        val chunk = session.player.physics.positionInfo.chunk
+
+        if (chunk == null) {
+            layout += DebugWorldInfo(guiRenderer)
+        }
+
+        layout += LineSpacerElement(guiRenderer)
+
+        layout += TextElement(guiRenderer, BaseComponent("Gamemode ", session.player.gamemode)).apply {
+            session.player.additional::gamemode.observe(this) { text = BaseComponent("Gamemode ", it) }
+        }
+
+        layout += TextElement(guiRenderer, BaseComponent("Difficulty ", session.world.difficulty?.difficulty, ", locked=", session.world.difficulty?.locked)).apply {
+            session.world::difficulty.observe(this) { text = BaseComponent("Difficulty ", it?.difficulty, ", locked=", it?.locked) }
+        }
+
+        layout += TextElement(guiRenderer, "Time TBA").apply {
+            session.world::time.observe(this, instant = true) {
+                text = BaseComponent(
+                    "Time ", it.time, " (", it.phase, ")", ", cycling=", it.cycling, "\n",
+                    "Date ", "day=", it.day, " (", it.moonPhase, ")"
+                )
+            }
+        }
+        layout += TextElement(guiRenderer, "Weather TBA").apply {
+            session.world::weather.observe(this, instant = true) {
+                text = BaseComponent("Weather r=", it.rain, ", t=", it.thunder)
+            }
+        }
+
+        layout += AutoTextElement(guiRenderer) { "Fun effect: " + context.framebuffer.world.`fun`.effect?.identifier.format() }
+
+        return layout
+    }
+
+    private fun initRight(): Element {
+        val layout = RowLayout(guiRenderer, HorizontalAlignments.RIGHT)
+        layout.margin = Vec4f(2)
+        layout += TextElement(guiRenderer, "Java ${Runtime.version()} ${System.getProperty("sun.arch.data.model")}bit", properties = RIGHT)
+        layout += TextElement(guiRenderer, "OS ${SystemInformation.OS_TEXT}", properties = RIGHT)
+
+        layout += LineSpacerElement(guiRenderer)
+
+        layout += AutoTextElement(guiRenderer, properties = RIGHT) { "Allocation rate ${AllocationRate.allocationRate}/s" }
+
+        SystemInformation.RUNTIME.apply {
+            layout += AutoTextElement(guiRenderer, properties = RIGHT) {
+                val total = maxMemory().bytes
+                val used = totalMemory().bytes - freeMemory().bytes
+                "Memory ${(used.bytes * 100.0 / total.bytes).rounded10}% $used / $total"
+            }
+            layout += AutoTextElement(guiRenderer, properties = RIGHT) {
+                val total = maxMemory().bytes
+                val allocated = totalMemory().bytes
+                "Allocated ${(allocated.bytes * 100.0 / total.bytes).rounded10}% $allocated / $total"
+            }
+        }
+
+        layout += LineSpacerElement(guiRenderer)
+
+        layout += TextElement(guiRenderer, "CPU ${SystemInformation.PROCESSOR_TEXT}", properties = RIGHT)
+        layout += TextElement(guiRenderer, "Memory ${SystemInformation.SYSTEM_MEMORY}", properties = RIGHT)
+
+
+        layout += LineSpacerElement(guiRenderer)
+
+        layout += TextElement(guiRenderer, "Display <?>", properties = RIGHT).apply {
+            context.window::size.observe(this, true) {
+                text = "Display ${it.x.format()}x${it.y.format()}"
+            }
+        }
+
+        context.system.apply {
+            layout += TextElement(guiRenderer, "GPU $gpuType", properties = RIGHT)
+            layout += TextElement(guiRenderer, "Version $version", properties = RIGHT)
+        }
+
+        MinosoftProperties.git?.let {
+            layout += LineSpacerElement(guiRenderer)
+
+            MinosoftPropertiesLoader.apply {
+                layout += TextElement(guiRenderer, "Git ${it.commitShort}/${it.branch}", properties = RIGHT)
+            }
+        }
+
+        layout += LineSpacerElement(guiRenderer)
+
+        layout += TextElement(guiRenderer, "${session.events.size.format()}x listeners", properties = RIGHT)
+
+        layout += LineSpacerElement(guiRenderer)
+
+        layout += AutoTextElement(guiRenderer, 20.ticks, properties = RIGHT) { "Dynamic textures ${context.textures.dynamic.size.format()}/${context.textures.dynamic.capacity.format()}" }
+
+        layout += LineSpacerElement(guiRenderer)
+
+        context.session.camera.target.apply {
+            layout += AutoTextElement(guiRenderer, properties = RIGHT) {
+                // ToDo: Tags
+                target ?: "No target"
+            }
+        }
+        return layout
+    }
+
+    private class DebugWorldInfo(guiRenderer: GUIRenderer) : RowLayout(guiRenderer) {
+        private val chunk = Reference<Chunk?>(null)
+        private var lastChunk = Reference<Chunk?>(null)
+        private val entity = guiRenderer.context.session.player
+
+        // TODO: Cleanup this class
+
+        init {
+            showWait()
+        }
+
+        private fun showWait() {
+            clear()
+            this += TextElement(guiRenderer, "Waiting for chunk...")
+        }
+
+        private fun updateInformation() {
+            entity.physics.positionInfo.apply {
+                this@DebugWorldInfo.chunk.value = chunk
+
+                // TODO: also try getting chunk prototype
+                if ((chunk == null && lastChunk.value == null) || (chunk != null && lastChunk.value != null)) {
+                    // No update, elements will update themselves
+                    return
+                }
+                if (chunk == null) {
+                    lastChunk.value = null
+                    showWait()
+                    return
+                }
+                clear()
+
+                this@DebugWorldInfo += AutoTextElement(guiRenderer) { BaseComponent("Sky properties ", entity.session.world.dimension.effects) }
+                this@DebugWorldInfo += AutoTextElement(guiRenderer) { BaseComponent("Biome ", entity.physics.positionInfo.biome) }
+                this@DebugWorldInfo += AutoTextElement(guiRenderer) { with(entity.session.world.getLight(entity.renderInfo.eyePosition.blockPosition)) { BaseComponent("Light block=", this.block, ", sky=", this.sky) } }
+                this@DebugWorldInfo += AutoTextElement(guiRenderer) { BaseComponent("Fully loaded: ", chunk.neighbours.complete) }
+
+                lastChunk.value = chunk
+            }
+        }
+
+        override fun tick() {
+            // ToDo: Make event driven
+            updateInformation()
+
+            super.tick()
+        }
+    }
+
+    override fun forceRender(offset: Vec2f, consumer: GuiVertexConsumer, options: GUIVertexOptions?) {
+        layout.forceRender(offset, consumer, options)
+    }
+
+    override fun forceSilentApply() {
+        cacheUpToDate = false
+    }
+
+    override fun onChildChange(child: Element) {
+        super.onChildChange(child)
+        forceSilentApply()
+    }
+
+    override fun tick() {
+        layout.tick()
+    }
+
+    companion object : HUDBuilder<LayoutedGUIElement<DebugHUDElement>> {
+        override val identifier = minosoft("debug_hud")
+        override val ENABLE_KEY_BINDING_NAME = minosoft("enable_debug_hud")
+        override val DEFAULT_ENABLED: Boolean = false
+        override val ENABLE_KEY_BINDING: KeyBinding = KeyBinding(
+            KeyActions.STICKY to setOf(KeyCodes.KEY_F3),
+        )
+        private val RIGHT = TextRenderProperties(HorizontalAlignments.RIGHT)
+
+        override fun build(guiRenderer: GUIRenderer): LayoutedGUIElement<DebugHUDElement> {
+            return LayoutedGUIElement(DebugHUDElement(guiRenderer)).apply { enabled = false }
+        }
+    }
+}

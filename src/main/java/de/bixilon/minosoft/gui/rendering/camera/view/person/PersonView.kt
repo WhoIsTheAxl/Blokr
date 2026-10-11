@@ -1,0 +1,59 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2025 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+package de.bixilon.minosoft.gui.rendering.camera.view.person
+
+import de.bixilon.kmath.vec.vec2.f.Vec2f
+import de.bixilon.minosoft.data.entities.EntityRotation
+import de.bixilon.minosoft.data.entities.entities.player.local.LocalPlayerEntity
+import de.bixilon.minosoft.gui.rendering.camera.Camera
+import de.bixilon.minosoft.gui.rendering.camera.view.CameraView
+import de.bixilon.minosoft.input.camera.MovementInputActions
+import de.bixilon.minosoft.input.camera.PlayerMovementInput
+import kotlin.time.Duration
+
+interface PersonView : CameraView {
+    val camera: Camera
+
+    override val fovMultiplier: Float
+        get() {
+            val base = if (camera.context.session.camera.entity.isSprinting) 1.3f else 1.0f
+            // TODO: item using, movement speed, ...
+            return base
+        }
+
+    override fun onInput(input: PlayerMovementInput, actions: MovementInputActions, delta: Duration) {
+        val isCamera = camera.context.session.camera.entity is LocalPlayerEntity
+        val player = camera.context.session.player
+
+        player.input = if (isCamera) input else PlayerMovementInput()
+
+        val inputActions = player.inputActions
+        if (isCamera) {
+            player.inputActions = MovementInputActions(
+                toggleFly = inputActions.toggleFly || actions.toggleFly,
+                startElytraFly = inputActions.startElytraFly || actions.startElytraFly,
+            )
+        }
+    }
+
+    fun handleMouse(delta: Vec2f): EntityRotation? {
+        val entity = camera.context.session.camera.entity
+        if (entity !is LocalPlayerEntity) {
+            return null
+        }
+        val rotation = camera.context.input.cameraInput.calculateRotation(delta, entity.physics.rotation)
+        entity.physics.forceSetRotation(rotation)
+        return rotation
+    }
+}

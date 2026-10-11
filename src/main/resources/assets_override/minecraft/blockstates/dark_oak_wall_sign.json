@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "block/sign/dark_oak/wall"
+    },
+    "facing=east": {
+      "model": "block/sign/dark_oak/wall",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "block/sign/dark_oak/wall",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "block/sign/dark_oak/wall",
+      "y": 270
+    }
+  }
+}

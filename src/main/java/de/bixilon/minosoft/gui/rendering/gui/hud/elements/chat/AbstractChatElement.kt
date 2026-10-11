@@ -1,0 +1,49 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2025 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+package de.bixilon.minosoft.gui.rendering.gui.hud.elements.chat
+
+import de.bixilon.kmath.vec.vec2.f.Vec2f
+import de.bixilon.minosoft.gui.rendering.gui.GUIRenderer
+import de.bixilon.minosoft.gui.rendering.gui.elements.Element
+import de.bixilon.minosoft.gui.rendering.gui.elements.text.TextFlowElement
+import de.bixilon.minosoft.gui.rendering.gui.gui.AbstractLayout
+import de.bixilon.minosoft.gui.rendering.gui.mesh.GUIVertexOptions
+import de.bixilon.minosoft.gui.rendering.gui.mesh.consumer.GuiVertexConsumer
+import de.bixilon.minosoft.util.Initializable
+import kotlin.time.Duration.Companion.seconds
+
+abstract class AbstractChatElement(guiRenderer: GUIRenderer) : Element(guiRenderer), Initializable, AbstractLayout<Element> {
+    protected val session = context.session
+    protected val profile = session.profiles.gui
+    protected val messages = TextFlowElement(guiRenderer, 20.seconds).apply { parent = this@AbstractChatElement }
+    override var activeElement: Element? = null
+    override var activeDragElement: Element? = null
+
+    override fun forceRender(offset: Vec2f, consumer: GuiVertexConsumer, options: GUIVertexOptions?) {
+        messages.render(offset + Vec2f(ChatElement.CHAT_INPUT_MARGIN, 0f), consumer, options)
+    }
+
+    override fun onScroll(position: Vec2f, scrollOffset: Vec2f): Boolean {
+        val size = messages.size
+        if (position.y > size.y || position.x > messages.size.x) {
+            return false
+        }
+        messages.onScroll(position, scrollOffset)
+        return true
+    }
+
+    override fun tick() {
+        messages.tick()
+    }
+}

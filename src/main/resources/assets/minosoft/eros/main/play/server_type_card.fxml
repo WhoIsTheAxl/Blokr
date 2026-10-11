@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~ Minosoft
+  ~ Copyright (C) 2020-2022 Moritz Zwerger
+  ~
+  ~ This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+  ~
+  ~ This software is not affiliated with Mojang AB, the original developer of Minecraft.
+  -->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.text.TextFlow?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+<HBox xmlns:fx="http://javafx.com/fxml/1" fx:id="root" prefHeight="80.0" xmlns="http://javafx.com/javafx/16" fx:controller="de.bixilon.minosoft.gui.eros.main.play.server.type.ServerTypeCardController">
+    <GridPane HBox.hgrow="ALWAYS">
+        <columnConstraints>
+            <ColumnConstraints hgrow="NEVER"/>
+            <ColumnConstraints hgrow="ALWAYS"/>
+        </columnConstraints>
+        <rowConstraints>
+            <RowConstraints vgrow="ALWAYS"/>
+        </rowConstraints>
+        <GridPane GridPane.columnIndex="1">
+            <TextFlow fx:id="headerFX" style="-fx-font-weight: bold; -fx-font-size: 20;">
+                <GridPane.margin>
+                    <Insets bottom="5.0" right="5.0" top="5.0"/>
+                </GridPane.margin>
+                <Text text="Header"/>
+            </TextFlow>
+            <TextFlow fx:id="textFX" GridPane.rowIndex="1">
+                <GridPane.margin>
+                    <Insets bottom="5.0" right="5.0"/>
+                </GridPane.margin>
+                <Text text="Text 1"/>
+            </TextFlow>
+            <columnConstraints>
+                <ColumnConstraints/>
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints/>
+                <RowConstraints/>
+            </rowConstraints>
+        </GridPane>
+        <FontIcon fx:id="iconFX" iconLiteral="fas-exclamation-triangle" iconSize="50">
+            <GridPane.margin>
+                <Insets left="5.0" right="15.0"/>
+            </GridPane.margin>
+        </FontIcon>
+    </GridPane>
+</HBox>

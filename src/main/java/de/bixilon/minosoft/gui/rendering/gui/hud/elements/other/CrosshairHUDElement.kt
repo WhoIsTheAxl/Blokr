@@ -1,0 +1,130 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2025 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+package de.bixilon.minosoft.gui.rendering.gui.hud.elements.other
+
+import de.bixilon.kutil.observer.DataObserver.Companion.observe
+import de.bixilon.minosoft.camera.target.targets.BlockTarget
+import de.bixilon.minosoft.camera.target.targets.EntityTarget
+import de.bixilon.minosoft.data.abilities.Gamemodes
+import de.bixilon.minosoft.data.registries.blocks.types.entity.BlockWithEntity
+import de.bixilon.minosoft.data.registries.identified.Namespaces.minecraft
+import de.bixilon.minosoft.data.registries.identified.Namespaces.minosoft
+import de.bixilon.minosoft.gui.rendering.gui.GUIRenderer
+import de.bixilon.minosoft.gui.rendering.gui.atlas.AtlasElement
+import de.bixilon.minosoft.gui.rendering.gui.gui.LayoutedGUIElement
+import de.bixilon.minosoft.gui.rendering.gui.hud.elements.CustomHUDElement
+import de.bixilon.minosoft.gui.rendering.gui.hud.elements.HUDBuilder
+import de.bixilon.minosoft.gui.rendering.gui.hud.elements.other.debug.DebugHUDElement
+import de.bixilon.minosoft.gui.rendering.gui.mesh.GuiMeshBuilder
+import de.bixilon.minosoft.gui.rendering.system.base.BlendingFunctions
+import de.bixilon.minosoft.gui.rendering.util.mesh.Mesh
+import de.bixilon.minosoft.util.collections.floats.FloatListUtil
+import de.bixilon.minosoft.util.collections.ints.IntListUtil
+
+class CrosshairHUDElement(guiRenderer: GUIRenderer) : CustomHUDElement(guiRenderer) {
+    private val profile = guiRenderer.session.profiles.gui
+    private val crosshairProfile = profile.hud.crosshair
+    private val data = FloatListUtil.direct(42, false)
+    private val index = IntListUtil.direct(42, false) // TODO
+    private var crosshairAtlasElement: AtlasElement? = null
+    private var mesh: Mesh? = null
+    private var previousDebugEnabled: Boolean? = true
+    private var reapply = true
+    private var previousNeedsDraw = needsDraw
+
+    override fun postInit() {
+        crosshairAtlasElement = guiRenderer.atlas[ATLAS]?.get("crosshair")
+        crosshairProfile::color.observe(this) { reapply = true }
+    }
+
+    override fun draw() {
+        val debugHUDElement: LayoutedGUIElement<DebugHUDElement>? = guiRenderer.hud[DebugHUDElement]
+
+        val needsDraw = needsDraw
+        if (this.needsDraw != needsDraw || debugHUDElement?.enabled != previousDebugEnabled || reapply) {
+            apply()
+            previousDebugEnabled = debugHUDElement?.enabled
+            this.previousNeedsDraw = needsDraw
+        }
+
+        val mesh = mesh ?: return
+
+        if (crosshairProfile.complementaryColor) {
+            context.system.reset(blending = true, sourceRGB = BlendingFunctions.ONE_MINUS_DESTINATION_COLOR, destinationRGB = BlendingFunctions.ONE_MINUS_SOURCE_COLOR)
+        } else {
+            context.system.reset()
+        }
+
+        guiRenderer.shader.use()
+        mesh.draw()
+    }
+
+    private val needsDraw: Boolean
+        get() {
+            // Custom draw to make the crosshair inverted
+            if (context.session.player.gamemode == Gamemodes.SPECTATOR) {
+                val target = context.session.camera.target.target
+                if (target !is EntityTarget && (target !is BlockTarget || target.state.block !is BlockWithEntity<*>)) {
+                    return false
+                }
+            }
+
+            val debugHUDElement: LayoutedGUIElement<DebugHUDElement>? = guiRenderer.hud[DebugHUDElement]
+
+            if (debugHUDElement?.enabled == true) {
+                // ToDo: Debug crosshair
+                // return
+            }
+            return true
+        }
+
+    override fun apply() {
+        val crosshairAtlasElement = crosshairAtlasElement ?: return
+
+        mesh?.unload()
+        this.mesh = null
+
+        val mesh = GuiMeshBuilder(context, guiRenderer.halfSize, this.data, this.index)
+        val start = (guiRenderer.scaledSize - CROSSHAIR_SIZE) / 2
+        mesh.addQuad(start, start + CROSSHAIR_SIZE, crosshairAtlasElement, crosshairProfile.color.rgba(), null)
+        mesh.fixIndex()
+
+
+        // ToDo: Attack indicator
+
+        this.mesh = mesh.bake().apply { load() }
+        this.reapply = false
+    }
+
+    override fun unload() {
+        data.free()
+        index.free()
+    }
+
+
+    companion object : HUDBuilder<CrosshairHUDElement> {
+        private val ATLAS = minecraft("hud/hud")
+        const val CROSSHAIR_SIZE = 16
+        override val identifier = minosoft("crosshair")
+
+        override fun register(gui: GUIRenderer) {
+            gui.atlas.load(ATLAS)
+        }
+
+
+        override fun build(guiRenderer: GUIRenderer): CrosshairHUDElement {
+            return CrosshairHUDElement(guiRenderer)
+        }
+    }
+}

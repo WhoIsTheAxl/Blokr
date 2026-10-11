@@ -1,0 +1,98 @@
+{
+  "type": "object",
+  "definitions": {
+    "vec2i": {
+      "type": "array",
+      "items": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        },
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4096
+        }
+      ],
+      "additionalItems": false
+    }
+  },
+  "patternProperties": {
+    "": {
+      "type": "object",
+      "patternProperties": {
+        "\\d+": {
+          "type": "object",
+          "properties": {
+            "texture": {
+              "type": "string"
+            },
+            "start": {
+              "$ref": "#/definitions/vec2i"
+            },
+            "end": {
+              "$ref": "#/definitions/vec2i"
+            },
+            "resolution": {
+              "$ref": "#/definitions/vec2i"
+            },
+            "slots": {
+              "type": "object",
+              "patternProperties": {
+                "\\d+": {
+                  "properties": {
+                    "start": {
+                      "$ref": "#/definitions/vec2i"
+                    },
+                    "end": {
+                      "$ref": "#/definitions/vec2i"
+                    }
+                  },
+                  "required": [
+                    "start",
+                    "end"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "areas": {
+              "type": "object",
+              "patternProperties": {
+                "\\w+": {
+                  "properties": {
+                    "start": {
+                      "$ref": "#/definitions/vec2i"
+                    },
+                    "end": {
+                      "$ref": "#/definitions/vec2i"
+                    }
+                  },
+                  "required": [
+                    "start",
+                    "end"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "required": [
+            "texture"
+          ],
+          "optional": [
+            "slots",
+            "areas",
+            "resolution",
+            "start",
+            "end"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

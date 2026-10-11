@@ -1,0 +1,49 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2025 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+package de.bixilon.minosoft.commands.parser.minecraft.range._int
+
+import de.bixilon.minosoft.commands.parser.ArgumentParser
+import de.bixilon.minosoft.commands.parser.brigadier._int.IntParser.Companion.readInt
+import de.bixilon.minosoft.commands.parser.factory.ArgumentParserFactory
+import de.bixilon.minosoft.commands.parser.minecraft.range.RangeParserFactory.readRange
+import de.bixilon.minosoft.commands.util.CommandReader
+import de.bixilon.minosoft.data.registries.identified.Namespaces.minecraft
+import de.bixilon.minosoft.protocol.protocol.buffers.play.PlayInByteBuffer
+
+class IntRangeParser(
+    val defaultMin: Int? = Int.MIN_VALUE,
+) : ArgumentParser<IntRange> {
+    override val examples: List<Any> = listOf(1, "1..10")
+
+    override fun parse(reader: CommandReader): IntRange {
+        return reader.readResult { reader.readIntRange(defaultMin) }.let { return@let it.result ?: throw IntRangeParseError(reader, it) }
+    }
+
+    companion object : ArgumentParserFactory<IntRangeParser> {
+        override val identifier = minecraft("float_range")
+
+        override fun read(buffer: PlayInByteBuffer) = IntRangeParser()
+
+        fun CommandReader.readIntRange(defaultMin: Int?): IntRange? {
+            val (first, second) = readRange { readInt() } ?: return null
+            if (first == null) {
+                return null
+            }
+            if (second == null) {
+                return (defaultMin ?: first)..first
+            }
+            return first..second
+        }
+    }
+}

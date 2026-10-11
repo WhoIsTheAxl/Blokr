@@ -1,0 +1,61 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2025 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+package de.bixilon.minosoft.gui.rendering.system.window.dummy
+
+import de.bixilon.kmath.vec.vec2.f.Vec2f
+import de.bixilon.kmath.vec.vec2.i.Vec2i
+import de.bixilon.kutil.observer.DataObserver.Companion.observed
+import de.bixilon.minosoft.gui.rendering.RenderContext
+import de.bixilon.minosoft.gui.rendering.system.base.texture.data.buffer.TextureBuffer
+import de.bixilon.minosoft.gui.rendering.system.window.CursorModes
+import de.bixilon.minosoft.gui.rendering.system.window.CursorShapes
+import de.bixilon.minosoft.gui.rendering.system.window.Window
+import de.bixilon.minosoft.gui.rendering.system.window.WindowFactory
+
+class DummyWindow : Window {
+    override val systemScale by observed(Vec2f(1.0f))
+    override var size by observed(Vec2i(1, 1))
+    override var minSize: Vec2i = Vec2i.EMPTY
+    override var maxSize: Vec2i = Vec2i.EMPTY
+    override var visible: Boolean = false
+    override var resizable: Boolean = true
+    override var fullscreen: Boolean = false
+    override var swapInterval: Int = 1
+    override var cursorMode: CursorModes = CursorModes.NORMAL
+    override var cursorShape: CursorShapes = CursorShapes.ARROW
+    override var title: String = ""
+    override val iconified: Boolean by observed(false)
+    override val focused: Boolean by observed(false)
+
+    override fun destroy() = Unit
+
+    override fun close() = Unit
+
+    override fun forceClose() = Unit
+
+    override fun begin() {
+    }
+
+    override fun end() {
+        Thread.sleep(100) // otherwise a million frames are drawn in test mode
+    }
+
+    override fun pollEvents() = Unit
+
+    override fun setIcon(buffer: TextureBuffer) = Unit
+
+    companion object : WindowFactory {
+        override fun create(context: RenderContext) = DummyWindow()
+    }
+}

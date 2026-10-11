@@ -1,0 +1,43 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2025 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+package de.bixilon.minosoft.gui.rendering.util.mesh.uv.array
+
+import de.bixilon.kmath.vec.vec2.f.Vec2f
+import de.bixilon.minosoft.gui.rendering.util.mesh.uv.PackedUV
+
+@JvmInline
+value class UnpackedUVArray(val raw: FloatArray) {
+
+    init {
+        if (raw.size != SIZE) throw IllegalArgumentException("UV is not packed!")
+    }
+
+    fun pack(): PackedUVArray {
+        val packed = FloatArray(PackedUVArray.SIZE)
+        for (i in 0 until PackedUVArray.SIZE) {
+            val u = raw[i * COMPONENT + 0]
+            val v = raw[i * COMPONENT + 1]
+
+            packed[i] = PackedUV(u, v).raw
+        }
+        return PackedUVArray(packed)
+    }
+
+    companion object {
+        const val COMPONENT = Vec2f.LENGTH
+        const val COMPONENT_SIZE = 4
+        const val SIZE = COMPONENT * COMPONENT_SIZE
+
+    }
+}

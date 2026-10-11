@@ -1,0 +1,55 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+#version 330 core
+
+layout (location = 0) in vec3 vinPosition;
+layout (location = 1) in float vinUVIndex;
+layout (location = 2) in float vinWidth;
+
+uniform mat4 uViewProjectionMatrix;
+uniform uint uTexture;
+uniform float uTextureOffset;
+
+uniform vec3 uCameraPosition;
+
+out vec3 finFragmentPosition; // fog
+
+#define DENSITY 1.0f
+#define HEIGHT 300.0f
+
+#include "minosoft:uv"
+#include "minosoft:color"
+#include "minosoft:light"
+#include "minosoft:animation"
+
+void main() {
+    vec3 position = vinPosition;
+    if (position.y < 0.0f) {
+        position.y = uCameraPosition.y - (HEIGHT / 2.0f);
+    } else if (position.y > 0.0f) {
+        position.y = uCameraPosition.y + (HEIGHT / 2.0f);
+    }
+    gl_Position = uViewProjectionMatrix * vec4(position, 1.0f);
+
+
+    vec2 uv = CONST_UV[floatBitsToUint(vinUVIndex)];
+
+    uv.x *= vinWidth / DENSITY;
+    uv.y *= vinWidth * (HEIGHT / vinWidth) / 2 / DENSITY;
+
+    uv.x += uTextureOffset; uv.y += uTextureOffset;
+
+    setTexture(uv, uTexture);
+    finFragmentPosition = position.xyz;
+}

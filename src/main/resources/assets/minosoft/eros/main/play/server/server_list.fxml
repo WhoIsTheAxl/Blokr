@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~ Minosoft
+  ~ Copyright (C) 2020-2022 Moritz Zwerger
+  ~
+  ~ This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+  ~
+  ~ This software is not affiliated with Mojang AB, the original developer of Minecraft.
+  -->
+
+<?import de.bixilon.minosoft.gui.eros.main.InfoPane?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<HBox xmlns:fx="http://javafx.com/fxml/1" maxHeight="Infinity" maxWidth="Infinity" prefHeight="500.0" prefWidth="900.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" xmlns="http://javafx.com/javafx/16" fx:controller="de.bixilon.minosoft.gui.eros.main.play.server.ServerListController">
+    <GridPane HBox.hgrow="ALWAYS">
+        <columnConstraints>
+            <ColumnConstraints hgrow="SOMETIMES"/>
+        </columnConstraints>
+        <rowConstraints>
+            <RowConstraints vgrow="ALWAYS"/>
+            <RowConstraints vgrow="NEVER"/>
+        </rowConstraints>
+        <GridPane GridPane.rowIndex="1">
+            <columnConstraints>
+                <ColumnConstraints hgrow="NEVER"/>
+                <ColumnConstraints hgrow="NEVER"/>
+                <ColumnConstraints hgrow="NEVER"/>
+                <ColumnConstraints hgrow="ALWAYS"/>
+                <ColumnConstraints hgrow="NEVER"/>
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints vgrow="NEVER"/>
+            </rowConstraints>
+            <CheckBox fx:id="hideOfflineFX" onAction="#refreshList" text="Hide offline">
+                <GridPane.margin>
+                    <Insets left="5.0" right="5.0"/>
+                </GridPane.margin>
+            </CheckBox>
+            <CheckBox fx:id="hideFullFX" onAction="#refreshList" text="Hide full" GridPane.columnIndex="1">
+                <GridPane.margin>
+                    <Insets left="5.0" right="5.0"/>
+                </GridPane.margin>
+            </CheckBox>
+            <CheckBox fx:id="hideEmptyFX" onAction="#refreshList" text="Hide empty" GridPane.columnIndex="2">
+                <GridPane.margin>
+                    <Insets left="5.0" right="5.0"/>
+                </GridPane.margin>
+            </CheckBox>
+            <Button fx:id="addServerButtonFX" onAction="#addServer" text="Add server" GridPane.columnIndex="4"/>
+            <GridPane.margin>
+                <Insets top="5.0"/>
+            </GridPane.margin>
+        </GridPane>
+        <GridPane>
+            <ListView fx:id="serverListViewFX" GridPane.hgrow="ALWAYS" GridPane.vgrow="ALWAYS"/>
+            <InfoPane fx:id="serverInfoFX" minHeight="0.0" minWidth="0.0" GridPane.columnIndex="1"/>
+        </GridPane>
+    </GridPane>
+</HBox>

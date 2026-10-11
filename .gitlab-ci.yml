@@ -1,0 +1,112 @@
+stages:
+  - create
+  - build
+  - test
+  - package
+  - publish
+
+
+.gradle:
+  image: azul/zulu-openjdk-alpine:17-latest
+  variables:
+    GRADLE_USER_HOME: $CI_PROJECT_DIR/.home
+    GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  cache:
+    - key: "$CI_COMMIT_SHA"
+      paths:
+        - build
+        - .gradle
+    - key:
+        files:
+          - "build.gradle.kts"
+          - "gradle.properties"
+      paths:
+        - .home/caches
+    - key:
+        files:
+          - "gradle/wrapper/gradle-wrapper.properties"
+      paths:
+        - .home/wrapper
+
+create:
+  stage: create
+  image: alpine:latest
+  script:
+    - apk add git curl
+    - ./release/create.sh
+  only:
+    - master
+
+build:
+  extends: .gradle
+  stage: build
+  script: ./gradlew --build-cache assemble -Pminosoft.updates=true
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_MERGE_REQUEST_ID && $CI_MERGE_REQUEST_DRAFT == "false"'
+
+test:
+  extends: .gradle
+  stage: test
+  script: ./gradlew test
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_MERGE_REQUEST_ID && $CI_MERGE_REQUEST_DRAFT == "false"'
+  artifacts:
+    when: always
+    reports:
+      junit: build/test-results/**/TEST-*.xml
+
+integration test:
+  extends: .gradle
+  stage: test
+  script: ./gradlew integrationTest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+    - if: '$CI_MERGE_REQUEST_ID && $CI_MERGE_REQUEST_DRAFT == "false"'
+  cache:
+    - key: "$CI_COMMIT_SHA"
+      paths:
+        - build
+        - .gradle
+    - key:
+        files:
+          - "build.gradle.kts"
+          - "gradle.properties"
+      paths:
+        - .home/caches
+    - key:
+        files:
+          - "gradle/wrapper/gradle-wrapper.properties"
+      paths:
+        - .home/wrapper
+    - key:
+        "minosoft-assets"
+      paths:
+        - ./it
+
+  artifacts:
+    when: always
+    reports:
+      junit: build/test-results/**/TEST-*.xml
+
+package:
+  extends: .gradle
+  stage: package
+  script:
+    - ./gradlew fatJar upload --stacktrace -Pminosoft.updates=true
+  only:
+    - master
+  artifacts:
+    paths:
+      - build/libs/minosoft-fat-*.jar
+    expire_in: 1 days
+
+publish:
+  stage: publish
+  image: alpine:latest
+  script:
+    - apk add git curl
+    - ./release/release.sh
+  only:
+    - master

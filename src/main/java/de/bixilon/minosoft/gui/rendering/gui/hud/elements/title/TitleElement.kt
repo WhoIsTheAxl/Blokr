@@ -1,0 +1,139 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2025 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+package de.bixilon.minosoft.gui.rendering.gui.hud.elements.title
+
+import de.bixilon.kmath.vec.vec2.f.MVec2f
+import de.bixilon.kmath.vec.vec2.f.Vec2f
+import de.bixilon.minosoft.data.registries.identified.Namespaces.minosoft
+import de.bixilon.minosoft.gui.rendering.font.renderer.element.TextRenderProperties
+import de.bixilon.minosoft.gui.rendering.gui.GUIRenderer
+import de.bixilon.minosoft.gui.rendering.gui.elements.Element
+import de.bixilon.minosoft.gui.rendering.gui.elements.HorizontalAlignments
+import de.bixilon.minosoft.gui.rendering.gui.elements.HorizontalAlignments.Companion.getOffset
+import de.bixilon.minosoft.gui.rendering.gui.elements.LayoutedElement
+import de.bixilon.minosoft.gui.rendering.gui.elements.text.fade.FadingTextElement
+import de.bixilon.minosoft.gui.rendering.gui.elements.text.fade.FadingTimes
+import de.bixilon.minosoft.gui.rendering.gui.gui.LayoutedGUIElement
+import de.bixilon.minosoft.gui.rendering.gui.hud.elements.HUDBuilder
+import de.bixilon.minosoft.gui.rendering.gui.mesh.GUIVertexOptions
+import de.bixilon.minosoft.gui.rendering.gui.mesh.consumer.GuiVertexConsumer
+import de.bixilon.minosoft.modding.event.events.title.*
+import de.bixilon.minosoft.modding.event.listener.CallbackEventListener.Companion.listen
+import de.bixilon.minosoft.protocol.network.session.play.tick.Ticks.Companion.ticks
+import de.bixilon.minosoft.util.Initializable
+
+// ToDo: Remove subtitle when hidden
+class TitleElement(guiRenderer: GUIRenderer) : Element(guiRenderer), LayoutedElement, Initializable {
+    val title = FadingTextElement(guiRenderer, "", background = null, properties = TextRenderProperties(scale = 4.0f), parent = this)
+    val subtitle = FadingTextElement(guiRenderer, "", background = null, properties = TextRenderProperties(scale = 2.0f), parent = this)
+    var times: FadingTimes = FadingTimes.EMPTY
+        set(value) {
+            if (field == value) return
+            field = value
+            title.times = value
+            subtitle.times = value
+        }
+    override var cacheEnabled: Boolean
+        get() = super.cacheEnabled && title.cacheEnabled && subtitle.cacheEnabled
+        set(value) {
+            super.cacheEnabled = value
+        }
+    override var cacheUpToDate: Boolean
+        get() = super.cacheUpToDate && title.cacheUpToDate && subtitle.cacheUpToDate
+        set(value) {
+            super.cacheEnabled = value
+        }
+
+    override val layoutOffset: Vec2f
+        get() {
+            val layoutOffset = MVec2f.EMPTY
+
+            val scaledSize = guiRenderer.scaledSize
+
+            layoutOffset.x = (scaledSize.x - super.size.x / 2) / 2
+            layoutOffset.y = (scaledSize.y / 2 - title.size.y)
+
+            return layoutOffset.unsafe
+        }
+
+    init {
+        times = DEFAULT_TIMES
+    }
+
+    override fun forceRender(offset: Vec2f, consumer: GuiVertexConsumer, options: GUIVertexOptions?) {
+        val size = size
+        title.render(offset + Vec2f(HorizontalAlignments.CENTER.getOffset(size.x, title.size.x), 0.0f), consumer, options)
+        subtitle.render(offset + Vec2f(HorizontalAlignments.CENTER.getOffset(size.x, subtitle.size.x), title.size.y + SUBTITLE_VERTICAL_OFFSET), consumer, options)
+    }
+
+    override fun forceSilentApply() {
+        val size = MVec2f(title.size)
+
+        size.x = maxOf(size.x, subtitle.size.x)
+        size.y += subtitle.size.y
+
+        this._size = size.unsafe
+    }
+
+    fun show() {
+        title.show()
+        subtitle.show()
+    }
+
+    fun hide() {
+        title.hide()
+        subtitle.hide()
+    }
+
+    fun reset() {
+        title.hide(true)
+        subtitle.hide(true)
+        title.text = ""
+        subtitle.text = ""
+
+        times = DEFAULT_TIMES
+    }
+
+    override fun postInit() {
+        val session = context.session
+
+        session.events.listen<TitleResetEvent> {
+            this.reset()
+        }
+        session.events.listen<TitleHideEvent> {
+            this.hide()
+        }
+        session.events.listen<TitleSetEvent> {
+            this.title.text = it.title
+            this.show()
+        }
+        session.events.listen<TitleSubtitleSetEvent> {
+            this.subtitle.text = it.subtitle
+            this.show()
+        }
+        session.events.listen<TitleTimesSetEvent> {
+            this.times = FadingTimes(it.fadeIn, it.stay, it.fadeOut)
+        }
+    }
+
+    companion object : HUDBuilder<LayoutedGUIElement<TitleElement>> {
+        override val identifier = minosoft("title")
+        const val SUBTITLE_VERTICAL_OFFSET = 10
+        private val DEFAULT_TIMES = FadingTimes(20.ticks, 60.ticks, 20.ticks) // TODO: default constructor?
+
+        override fun build(guiRenderer: GUIRenderer): LayoutedGUIElement<TitleElement> {
+            return LayoutedGUIElement(TitleElement(guiRenderer))
+        }
+    }
+}

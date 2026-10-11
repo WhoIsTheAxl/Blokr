@@ -1,0 +1,50 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2025 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+package de.bixilon.minosoft.gui.rendering.skeletal.model.elements
+
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import de.bixilon.kmath.vec.vec2.i.Vec2i
+import de.bixilon.kmath.vec.vec3.f.Vec3f
+import de.bixilon.minosoft.data.direction.Directions
+import de.bixilon.minosoft.data.registries.identified.ResourceLocation
+import de.bixilon.minosoft.gui.rendering.skeletal.baked.SkeletalBakeContext
+import de.bixilon.minosoft.util.json.skeltal.SkeletalFaceDeserializer
+import de.bixilon.minosoft.util.json.skeltal.SkeletalRotationDeserializer
+
+data class SkeletalElement(
+    val from: Vec3f,
+    val to: Vec3f,
+    val offset: Vec3f = Vec3f.EMPTY,
+    @field:JsonDeserialize(using = SkeletalRotationDeserializer::class) val rotation: SkeletalRotation? = null,
+    val inflate: Float = 0.0f,
+    val texture: ResourceLocation? = null,
+    val uv: Vec2i? = null,
+    val transform: String? = null,
+    @field:JsonDeserialize(using = SkeletalFaceDeserializer::class) val faces: Map<Directions, SkeletalFace>,
+    val children: Map<String, SkeletalElement> = emptyMap(),
+) {
+
+    fun bake(context: SkeletalBakeContext, path: String) {
+        val context = context.copy(element = this)
+
+
+        val transform = context.transform.id
+        for ((direction, face) in faces) {
+            face.bake(context, direction, this, transform, path)
+        }
+        for ((name, child) in children) {
+            child.bake(context, "$path.$name")
+        }
+    }
+}

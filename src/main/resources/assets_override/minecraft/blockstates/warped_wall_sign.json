@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "block/sign/warped/wall"
+    },
+    "facing=east": {
+      "model": "block/sign/warped/wall",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "block/sign/warped/wall",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "block/sign/warped/wall",
+      "y": 270
+    }
+  }
+}

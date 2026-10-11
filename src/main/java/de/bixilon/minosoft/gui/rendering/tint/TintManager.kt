@@ -1,0 +1,137 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2026 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+package de.bixilon.minosoft.gui.rendering.tint
+
+import de.bixilon.kutil.cast.CastUtil.unsafeCast
+import de.bixilon.kutil.primitive.IntUtil.toInt
+import de.bixilon.minosoft.assets.AssetsManager
+import de.bixilon.minosoft.data.container.stack.ItemStack
+import de.bixilon.minosoft.data.registries.biomes.Biome
+import de.bixilon.minosoft.data.registries.blocks.state.BlockState
+import de.bixilon.minosoft.data.registries.blocks.state.BlockStateFlags
+import de.bixilon.minosoft.data.registries.fluid.Fluid
+import de.bixilon.minosoft.data.registries.item.items.Item
+import de.bixilon.minosoft.data.registries.item.items.pixlyzer.PixLyzerItem
+import de.bixilon.minosoft.data.text.formatting.color.Colors
+import de.bixilon.minosoft.data.text.formatting.color.RGBArray
+import de.bixilon.minosoft.data.text.formatting.color.RGBColor
+import de.bixilon.minosoft.data.text.formatting.color.RGBColor.Companion.rgb
+import de.bixilon.minosoft.data.world.chunk.chunk.Chunk
+import de.bixilon.minosoft.data.world.positions.BlockPosition
+import de.bixilon.minosoft.data.world.positions.InChunkPosition
+import de.bixilon.minosoft.gui.rendering.tint.sampler.TintSampler
+import de.bixilon.minosoft.gui.rendering.tint.tints.grass.GrassTintCalculator
+import de.bixilon.minosoft.gui.rendering.tint.tints.plants.FoliageTintCalculator
+import de.bixilon.minosoft.protocol.network.session.play.PlaySession
+
+class TintManager(val session: PlaySession) {
+    private val profile = session.profiles.rendering.biome
+    val grass = GrassTintCalculator()
+    val foliage = FoliageTintCalculator()
+
+
+    fun init(assetsManager: AssetsManager) {
+        grass.init(assetsManager)
+        foliage.init(assetsManager)
+
+        for (block in session.registries.block) {
+            if (block !is TintedBlock) continue
+            block.initTint(this)
+        }
+        for (item in session.registries.item) {
+            if (item !is TintedBlock) continue
+            item.initTint(this)
+        }
+
+        DefaultTints.init(this)
+    }
+
+    fun createSampler(): TintSampler {
+        val blending = profile.blending.enabled
+        val algorithm = profile.blending.algorithm
+        val radius = profile.blending.radius
+
+        return TintSampler.of(blending, algorithm, radius)
+    }
+
+    fun getBlockTint(state: BlockState, position: BlockPosition, biome: Biome?, result: RGBArray, provider: TintProvider) {
+        for (tintIndex in 0 until provider.count) {
+            result[tintIndex] = provider.getBlockTint(state, biome, position, tintIndex)
+        }
+    }
+
+    fun getBlockTint(state: BlockState, position: BlockPosition, biome: Biome?, cache: RGBArray?): RGBArray? {
+        if (BlockStateFlags.TINTED !in state.flags) return null
+        val provider = state.block.unsafeCast<TintedBlock>().tintProvider ?: return null
+
+        val size = provider.count
+        val tints = if (cache != null && cache.size >= size) cache else RGBArray(size)
+
+        getBlockTint(state, position, biome, tints, provider)
+
+        return tints
+    }
+
+
+    fun getParticleTint(state: BlockState, position: BlockPosition): RGBColor {
+        if (BlockStateFlags.TINTED !in state.flags || state.block !is TintedBlock) return Colors.WHITE_RGB
+        val provider = state.block.tintProvider ?: return Colors.WHITE_RGB
+
+        // TODO: cache chunk of particle
+        val biome = if (TintProviderFlags.BIOME in provider.flags) session.world.biomes[position] else null
+        return provider.getParticleTint(state, biome, position)
+    }
+
+    fun getFluidTint(chunk: Chunk, fluid: Fluid, position: BlockPosition): RGBColor {
+        val provider = fluid.model?.tint ?: return Colors.WHITE_RGB
+        val biome = chunk.world.biomes.accessor[chunk, position.inChunkPosition]
+        return provider.getFluidTint(biome, position)
+    }
+
+    private fun Item.getTintProvider(): TintProvider? {
+        if (this is TintedBlock && tintProvider != null) return tintProvider
+        if (this::class.java == Item::class.java && this !is PixLyzerItem) return null
+        // TODO: dirty hack: get block
+        val block = session.registries.block[identifier] ?: return null
+        if (block !is TintedBlock) return null
+        return block.tintProvider
+    }
+
+    fun getItemTint(stack: ItemStack): RGBArray? {
+        val tintProvider = stack.item.getTintProvider() ?: return null
+        val tints = RGBArray(tintProvider.count)
+
+        for (tintIndex in tints.array.indices) {
+            tints[tintIndex] = tintProvider.getItemTint(stack, tintIndex)
+        }
+
+        return tints
+    }
+
+    companion object {
+        const val NO_TINT = -1
+
+        fun getJsonColor(color: Int): RGBColor? {
+            if (color == 0) {
+                return null
+            }
+            return color.rgb()
+        }
+
+        fun Any?.jsonTint(): RGBColor? {
+            val rgb = this?.toInt() ?: return null
+            return getJsonColor(rgb)
+        }
+    }
+}

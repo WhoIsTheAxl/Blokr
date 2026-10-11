@@ -1,0 +1,139 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2025 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+package de.bixilon.minosoft.data.registries.blocks.light
+
+import de.bixilon.minosoft.data.Axes
+import de.bixilon.minosoft.data.direction.Directions
+import de.bixilon.minosoft.data.registries.shapes.aabb.AABB
+import de.bixilon.minosoft.data.registries.shapes.aabb.AABBList
+import de.bixilon.minosoft.data.registries.shapes.shape.Shape
+import de.bixilon.minosoft.data.registries.shapes.side.SideQuad
+
+class DirectedProperty(
+    private val directions: BooleanArray,
+    override val skylightEnters: Boolean,
+    override val filtersSkylight: Boolean,
+) : LightProperties {
+    override val propagatesLight: Boolean = true
+
+    override fun propagatesLight(direction: Directions): Boolean {
+        return directions[direction.ordinal]
+    }
+
+    override fun toString() = "Directed{directions=${directions.contentToString()}, enters=$skylightEnters, filters=$filtersSkylight}"
+
+    override fun hashCode() = directions.contentHashCode()
+    override fun equals(other: Any?) = when (other) {
+        is DirectedProperty -> directions.contentEquals(other.directions) && skylightEnters == other.skylightEnters && filtersSkylight == other.filtersSkylight
+        else -> false
+    }
+
+    companion object {
+        private val TRUE = BooleanArray(Directions.SIZE) { true }
+        private val FALSE = BooleanArray(Directions.SIZE) { false }
+        private val FULL_SIDE = SideQuad(0.0f, 0.0f, 1.0f, 1.0f)
+        private val REQUIRED_SURFACE_AREA = FULL_SIDE.surfaceArea() - 0.0001f // add some padding for floating point
+
+        private val BooleanArray.isSimple: Boolean?
+            get() {
+                var value: Boolean? = null
+                for (entry in this) {
+                    if (value == null) {
+                        value = entry
+                        continue
+                    }
+                    if (entry != value) {
+                        return null
+                    }
+                }
+                return value
+            }
+
+        fun of(shape: Shape, skylightEnters: Boolean = true, filtersLight: Boolean = false): LightProperties {
+            val directions = BooleanArray(Directions.SIZE)
+
+            for ((index, direction) in Directions.VALUES.withIndex()) {
+                directions[index] = !shape.isSideCovered(direction)
+            }
+
+
+            val simple = directions.isSimple ?: return DirectedProperty(directions, skylightEnters, filtersLight)
+
+            if (!filtersLight) {
+                return DirectedProperty(if (simple) TRUE else FALSE, simple, !simple)
+            }
+
+            return if (simple) TransparentProperty else OpaqueProperty
+        }
+
+        private fun AABB.getSideArea(direction: Directions, target: SideQuad): Float {
+            val a: Float
+            val b: Float
+            val c: Float
+            val d: Float
+
+            when (direction.axis) {
+                Axes.Y -> {
+                    if ((direction == Directions.DOWN && min.y != 0.0) || (direction == Directions.UP && max.y != 1.0)) {
+                        return 0.0f
+                    }
+                    a = min.x.toFloat(); b = min.z.toFloat(); c = max.x.toFloat(); d = max.z.toFloat()
+                }
+
+                Axes.X -> {
+                    if ((direction == Directions.WEST && min.x != 0.0) || (direction == Directions.EAST && max.x != 1.0)) {
+                        return 0.0f
+                    }
+                    a = min.y.toFloat(); b = min.z.toFloat(); c = max.y.toFloat(); d = max.z.toFloat()
+                }
+
+                Axes.Z -> {
+                    if ((direction == Directions.NORTH && min.z != 0.0) || (direction == Directions.SOUTH && max.z != 1.0)) {
+                        return 0.0f
+                    }
+                    a = min.x.toFloat(); b = min.y.toFloat(); c = max.x.toFloat(); d = max.y.toFloat()
+                }
+            }
+            val width = minOf(target.max.x, c) - maxOf(a, target.min.x)
+            val height = minOf(target.max.y, d) - maxOf(b, target.min.y)
+
+            return width * height
+        }
+
+        private fun AABBList.getSideArea(direction: Directions, target: SideQuad): Float {
+            var total = 0.0f
+            for (aabb in this) {
+                total += aabb.getSideArea(direction, target)
+            }
+            return total
+        }
+
+
+        // overlapping is broken, see https://stackoverflow.com/questions/7342935/algorithm-to-compute-total-area-covered-by-a-set-of-overlapping-segments
+        // ToDo: This whole calculation is technically wrong, it could be that 2 different sides of 2 blocks are "free". That means that light can still not pass the blocks, but
+        // this algorithm does not cover it. Let's see it as performance hack
+        private fun Shape.getSideArea(direction: Directions, target: SideQuad) = when (this) {
+            is AABB -> getSideArea(direction, target)
+            is AABBList -> getSideArea(direction, target)
+            else -> 0.0f
+        }
+
+        fun Shape.isSideCovered(direction: Directions): Boolean {
+            // this should be improved: https://stackoverflow.com/questions/76373725/check-if-a-quad-is-fully-covered-by-a-set-of-others
+            val surface = getSideArea(direction, FULL_SIDE)
+
+            return surface >= REQUIRED_SURFACE_AREA
+        }
+    }
+}

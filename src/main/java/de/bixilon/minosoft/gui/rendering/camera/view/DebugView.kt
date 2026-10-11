@@ -1,0 +1,86 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2025 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+package de.bixilon.minosoft.gui.rendering.camera.view
+
+import de.bixilon.kmath.vec.vec2.f.Vec2f
+import de.bixilon.kmath.vec.vec3.d.MVec3d
+import de.bixilon.kmath.vec.vec3.d.Vec3d
+import de.bixilon.kmath.vec.vec3.f.Vec3f
+import de.bixilon.kutil.math.simple.DoubleMath.clamp
+import de.bixilon.minosoft.data.entities.EntityRotation
+import de.bixilon.minosoft.gui.rendering.RenderContext
+import de.bixilon.minosoft.gui.rendering.camera.Camera
+import de.bixilon.minosoft.gui.rendering.camera.CameraDefinition.CAMERA_UP_VEC3
+import de.bixilon.minosoft.input.camera.MovementInputActions
+import de.bixilon.minosoft.input.camera.PlayerMovementInput
+import kotlin.time.Duration
+import kotlin.time.DurationUnit
+
+class DebugView(private val camera: Camera) : CameraView {
+    override val context: RenderContext get() = camera.context
+    override val updateFrustum: Boolean get() = false
+    override val shaking: Boolean get() = false
+
+    override var eyePosition = Vec3d.EMPTY
+
+    override var rotation = EntityRotation.EMPTY
+    override var front = Vec3f.EMPTY
+
+
+    override fun onInput(input: PlayerMovementInput, actions: MovementInputActions, delta: Duration) {
+        camera.context.session.player.input = PlayerMovementInput()
+        var speedMultiplier = 10
+        if (input.sprint) {
+            speedMultiplier *= 3
+            if (input.sneak) {
+                speedMultiplier *= 3
+            }
+        } else if (input.sneak) {
+            speedMultiplier /= 3
+        }
+
+        val movement = MVec3d()
+
+        if (input.forwards != 0.0f) {
+            movement += front * input.forwards
+        }
+        if (input.sideways != 0.0f) {
+            val cameraRight = (CAMERA_UP_VEC3 cross front).normalize()
+            movement += cameraRight * input.sideways
+        }
+
+        if (movement.length2() != 0.0) {
+            movement.normalizeAssign()
+        }
+        movement *= speedMultiplier
+        movement *= delta.toDouble(DurationUnit.SECONDS).clamp(0.0, 1.0)
+
+        eyePosition += movement
+    }
+
+    override fun onMouse(delta: Vec2f) {
+        val rotation = context.input.cameraInput.calculateRotation(delta, this.rotation)
+        if (rotation == this.rotation) {
+            return
+        }
+        this.rotation = rotation
+        this.front = rotation.front
+    }
+
+    override fun onAttach(previous: CameraView?) {
+        this.eyePosition = previous?.eyePosition ?: Vec3d.EMPTY
+        this.rotation = previous?.rotation ?: EntityRotation.EMPTY
+        this.front = previous?.front ?: Vec3f.EMPTY
+    }
+}

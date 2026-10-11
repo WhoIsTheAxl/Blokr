@@ -1,0 +1,177 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2026 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+package de.bixilon.minosoft.gui.rendering.entities.feature.item
+
+import de.bixilon.kmath.mat.mat4.f.MMat4f
+import de.bixilon.kmath.mat.mat4.f.Mat4f
+import de.bixilon.kmath.vec.vec3.f.MVec3f
+import de.bixilon.minosoft.data.container.stack.ItemStack
+import de.bixilon.minosoft.gui.rendering.entities.feature.block.BlockMeshBuilder
+import de.bixilon.minosoft.gui.rendering.entities.feature.block.BlockShader
+import de.bixilon.minosoft.gui.rendering.entities.feature.item.ItemFeature.ItemRenderDistance.Companion.getCount
+import de.bixilon.minosoft.gui.rendering.entities.feature.mesh.MeshedFeature
+import de.bixilon.minosoft.gui.rendering.entities.renderer.EntityRenderer
+import de.bixilon.minosoft.gui.rendering.entities.visibility.EntityLayer
+import de.bixilon.minosoft.gui.rendering.models.item.ItemRenderUtil.getModel
+import de.bixilon.minosoft.gui.rendering.models.raw.display.DisplayPositions
+import de.bixilon.minosoft.gui.rendering.util.mesh.Mesh
+import de.bixilon.minosoft.util.Backports.nextFloatPort
+import java.util.*
+import kotlin.time.Duration
+
+open class ItemFeature(
+    renderer: EntityRenderer<*>,
+    stack: ItemStack?,
+    val display: DisplayPositions,
+    val many: Boolean = true,
+) : MeshedFeature<Mesh>(renderer) {
+    private var matrix = MMat4f()
+    private var displayMatrix = Mat4f.EMPTY
+    private var distance: ItemRenderDistance? = null
+    var stack: ItemStack? = stack
+        set(value) {
+            if (field == value) return
+            field = value
+            unload = true
+        }
+
+    override val layer get() = EntityLayer.Translucent // TODO
+
+    override fun update(delta: Duration) {
+        super.update(delta)
+
+        updateDistance()
+        if (this.mesh == null) {
+            val stack = this.stack ?: return unload()
+            createMesh(stack)
+        }
+        updateMatrix()
+    }
+
+    private fun updateDistance() {
+        val distance = ItemRenderDistance.of(renderer.distance2)
+        if (distance == this.distance) return
+        unload = true
+        this.distance = distance
+    }
+
+    private fun createMesh(stack: ItemStack) {
+        val distance = this.distance ?: return
+        val model = stack.item.getModel(renderer.renderer.session) ?: return
+        val display = model.getDisplay(display)
+        this.displayMatrix = display?.matrix ?: Mat4f.EMPTY
+        val mesh = BlockMeshBuilder(renderer.renderer.context)
+        val offset = MVec3f()
+
+        val tint = renderer.renderer.context.tints.getItemTint(stack)
+
+        val count = if (many) distance.getCount(stack.count) else 1
+        val spread = minOf(0.1f, count / 30.0f)
+
+        model.render(offset.unsafe, mesh, stack, tint) // 0 without offset
+
+        if (count > 1) {
+            val random = Random(1234567890123456789L)
+            for (i in 0 until count - 1) {
+                offset.x = random.nextFloatPort(-spread, spread)
+                offset.y = random.nextFloatPort(-spread, spread)
+                offset.z = random.nextFloatPort(-spread, spread)
+
+                model.render(offset.unsafe, mesh, stack, tint)
+            }
+        }
+        // TODO: enchantment glint, ...
+
+        this.mesh = mesh.bake()
+    }
+
+    private fun updateMatrix() {
+        val matrix = this.matrix
+
+        matrix.set(renderer.matrix.unsafe)
+        matrix *= displayMatrix
+
+        matrix.apply {
+            translateXAssign(-0.5f)
+            translateZAssign(-0.5f)
+        }
+    }
+
+    override fun draw(mesh: Mesh) {
+        renderer.renderer.context.system.set(layer.settings)
+        val shader = renderer.renderer.features.block.shader
+        draw(mesh, shader)
+    }
+
+
+    protected open fun draw(mesh: Mesh, shader: BlockShader) {
+        shader.use()
+        shader.matrix = matrix.unsafe
+        shader.tint = renderer.light.value
+        super.draw(mesh)
+    }
+
+    override fun unload() {
+        this.displayMatrix = Mat4f.EMPTY
+        super.unload()
+    }
+
+    private enum class ItemRenderDistance(distance: Double) {
+        CLOSE(10.0),
+        MID(20.0),
+        FAR(30.0),
+        EXTREME(48.0),
+        ;
+
+        val distance = distance * distance
+
+        companion object {
+
+            fun of(distance: Double) = when {
+                distance < CLOSE.distance -> CLOSE
+                distance < MID.distance -> MID
+                distance < FAR.distance -> FAR
+                distance < EXTREME.distance -> EXTREME
+                else -> null
+            }
+
+            fun ItemRenderDistance.getCount(count: Int) = when (this) {
+                CLOSE -> when {
+                    count <= 12 -> count
+                    else -> 16
+                }
+
+                MID -> when {
+                    count <= 4 -> count
+                    count < 16 -> 5
+                    count < 32 -> 6
+                    count < 48 -> 7
+                    else -> 8
+                }
+
+                FAR -> when {
+                    count <= 2 -> count
+                    count < 32 -> 3
+                    else -> 4
+                }
+
+                EXTREME -> when {
+                    count <= 1 -> count
+                    count <= 32 -> 1
+                    else -> 2
+                }
+            }
+        }
+    }
+}

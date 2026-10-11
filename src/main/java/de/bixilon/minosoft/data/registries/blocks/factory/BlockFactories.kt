@@ -1,0 +1,197 @@
+/*
+ * Minosoft
+ * Copyright (C) 2020-2026 Moritz Zwerger
+ *
+ * This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * This software is not affiliated with Mojang AB, the original developer of Minecraft.
+ */
+
+@file:Suppress("DEPRECATION")
+
+package de.bixilon.minosoft.data.registries.blocks.factory
+
+import de.bixilon.minosoft.data.registries.blocks.settings.BlockSettings
+import de.bixilon.minosoft.data.registries.blocks.types.Block
+import de.bixilon.minosoft.data.registries.blocks.types.air.AirBlock
+import de.bixilon.minosoft.data.registries.blocks.types.bee.HoneyBlock
+import de.bixilon.minosoft.data.registries.blocks.types.building.CarpetBlock
+import de.bixilon.minosoft.data.registries.blocks.types.building.DoorBlock
+import de.bixilon.minosoft.data.registries.blocks.types.building.Gravel
+import de.bixilon.minosoft.data.registries.blocks.types.building.WoolBlock
+import de.bixilon.minosoft.data.registries.blocks.types.building.brick.*
+import de.bixilon.minosoft.data.registries.blocks.types.building.copper.*
+import de.bixilon.minosoft.data.registries.blocks.types.building.dirt.Dirt
+import de.bixilon.minosoft.data.registries.blocks.types.building.dirt.GrassBlock
+import de.bixilon.minosoft.data.registries.blocks.types.building.end.EndStoneBrick
+import de.bixilon.minosoft.data.registries.blocks.types.building.end.Purpur
+import de.bixilon.minosoft.data.registries.blocks.types.building.nether.Glowstone
+import de.bixilon.minosoft.data.registries.blocks.types.building.nether.Netherrack
+import de.bixilon.minosoft.data.registries.blocks.types.building.nether.SoulSand
+import de.bixilon.minosoft.data.registries.blocks.types.building.nether.SoulSoil
+import de.bixilon.minosoft.data.registries.blocks.types.building.plants.DoublePlant
+import de.bixilon.minosoft.data.registries.blocks.types.building.plants.FernBlock
+import de.bixilon.minosoft.data.registries.blocks.types.building.plants.FlowerBlock
+import de.bixilon.minosoft.data.registries.blocks.types.building.prismarine.DarkPrismarine
+import de.bixilon.minosoft.data.registries.blocks.types.building.prismarine.Prismarine
+import de.bixilon.minosoft.data.registries.blocks.types.building.prismarine.PrismarineBrick
+import de.bixilon.minosoft.data.registries.blocks.types.building.quartz.QuartzBlock
+import de.bixilon.minosoft.data.registries.blocks.types.building.quartz.SmoothQuartz
+import de.bixilon.minosoft.data.registries.blocks.types.building.snow.SnowBlock
+import de.bixilon.minosoft.data.registries.blocks.types.building.snow.SnowLayerBlock
+import de.bixilon.minosoft.data.registries.blocks.types.building.stone.*
+import de.bixilon.minosoft.data.registries.blocks.types.building.stone.blackstone.Blackstone
+import de.bixilon.minosoft.data.registries.blocks.types.building.stone.blackstone.PolishedBlackstone
+import de.bixilon.minosoft.data.registries.blocks.types.building.stone.blackstone.PolishedBlackstoneBrick
+import de.bixilon.minosoft.data.registries.blocks.types.building.stone.deepslate.*
+import de.bixilon.minosoft.data.registries.blocks.types.building.stone.sand.*
+import de.bixilon.minosoft.data.registries.blocks.types.building.stone.tuff.PolishedTuff
+import de.bixilon.minosoft.data.registries.blocks.types.building.stone.tuff.Tuff
+import de.bixilon.minosoft.data.registries.blocks.types.building.stone.tuff.TuffBrick
+import de.bixilon.minosoft.data.registries.blocks.types.climbing.ScaffoldingBlock
+import de.bixilon.minosoft.data.registries.blocks.types.entity.storage.EnderChestBlock
+import de.bixilon.minosoft.data.registries.blocks.types.entity.storage.ShulkerBoxBlock
+import de.bixilon.minosoft.data.registries.blocks.types.entity.storage.WoodenChestBlock
+import de.bixilon.minosoft.data.registries.blocks.types.fluid.LavaFluidBlock
+import de.bixilon.minosoft.data.registries.blocks.types.fluid.water.BubbleColumnBlock
+import de.bixilon.minosoft.data.registries.blocks.types.fluid.water.WaterFluidBlock
+import de.bixilon.minosoft.data.registries.blocks.types.light.torch.RedstoneTorchBlock
+import de.bixilon.minosoft.data.registries.blocks.types.light.torch.TorchBlock
+import de.bixilon.minosoft.data.registries.blocks.types.pixlyzer.SlimeBlock
+import de.bixilon.minosoft.data.registries.blocks.types.pixlyzer.snow.PowderSnowBlock
+import de.bixilon.minosoft.data.registries.blocks.types.portal.NetherPortalBlock
+import de.bixilon.minosoft.data.registries.blocks.types.pvp.CobwebBlock
+import de.bixilon.minosoft.data.registries.blocks.types.wood.*
+import de.bixilon.minosoft.data.registries.factory.DefaultFactory
+import de.bixilon.minosoft.data.registries.identified.ResourceLocation
+import de.bixilon.minosoft.data.registries.registries.Registries
+
+
+object BlockFactories : DefaultFactory<BlockFactory<*>>(
+    AirBlock.Air, AirBlock.VoidAir, AirBlock.CaveAir,
+    Bedrock,
+
+    StoneBlock.Block, StoneBlock.Slab, StoneBlock.Stairs,
+    SmoothStone.Block, SmoothStone.Slab,
+    StoneBrick.Block, StoneBrick.Slab, StoneBrick.Stairs,
+    Cobblestone.Block, Cobblestone.Slab, Cobblestone.Stairs,
+    MossyCobblestone.Block, MossyCobblestone.Slab, MossyCobblestone.Stairs,
+    Granite.Block, Granite.Slab, Granite.Stairs,
+    PolishedGranite.Block, PolishedGranite.Slab, PolishedGranite.Stairs,
+    Diorite.Block, Diorite.Slab, Diorite.Stairs,
+    PolishedDiorite.Block, PolishedDiorite.Slab, PolishedDiorite.Stairs,
+    Andesite.Block, Andesite.Slab, Andesite.Stairs,
+    PolishedAndesite.Block, PolishedAndesite.Slab, PolishedAndesite.Stairs,
+    Tuff.Block, Tuff.Slab, Tuff.Stairs,
+    TuffBrick.Block, TuffBrick.Slab, TuffBrick.Stairs,
+    PolishedTuff.Block, PolishedTuff.Slab, PolishedTuff.Stairs,
+    Deepslate.Block,
+    CobbledDeepslate.Block, CobbledDeepslate.Slab, CobbledDeepslate.Stairs,
+    PolishedDeepslate.Block, PolishedDeepslate.Slab, PolishedDeepslate.Stairs,
+    DeepslateBricks.Block, DeepslateBricks.Slab, DeepslateBricks.Stairs,
+    DeepslateTile.Block, DeepslateTile.Slab, DeepslateTile.Stairs,
+
+    Blackstone.Block, Blackstone.Slab, Blackstone.Stairs,
+    PolishedBlackstone.Block, PolishedBlackstone.Slab, PolishedBlackstone.Stairs,
+    PolishedBlackstoneBrick.Block, PolishedBlackstoneBrick.Slab, PolishedBlackstoneBrick.Stairs,
+
+    Dripstone.Block,
+
+    Gravel,
+
+    Sandstone.Block, Sandstone.Slab, Sandstone.Stairs,
+    CutSandstone.Block, CutSandstone.Slab,
+    SmoothSandstone.Block, SmoothSandstone.Slab, SmoothSandstone.Stairs,
+    RedSandstone.Block, RedSandstone.Slab, RedSandstone.Stairs,
+    CutRedSandstone.Block, CutRedSandstone.Slab,
+    SmoothRedSandstone.Block, SmoothRedSandstone.Slab, SmoothRedSandstone.Stairs,
+
+    QuartzBlock.Block, QuartzBlock.Slab, QuartzBlock.Stairs,
+    SmoothQuartz.Block, SmoothQuartz.Slab, SmoothQuartz.Stairs,
+
+    Brick.Block, Brick.Slab, Brick.Stairs,
+    NetherBrick.Block, NetherBrick.Slab, NetherBrick.Fence, NetherBrick.Stairs,
+    MudBrick.Block, MudBrick.Slab, MudBrick.Stairs,
+    MossyStoneBrick.Block, MossyStoneBrick.Slab, MossyStoneBrick.Stairs,
+    RedNetherBrick.Block, RedNetherBrick.Slab, RedNetherBrick.Stairs,
+
+
+    Prismarine.Block, Prismarine.Slab, Prismarine.Stairs,
+    PrismarineBrick.Block, PrismarineBrick.Slab, PrismarineBrick.Stairs,
+    DarkPrismarine.Block, DarkPrismarine.Slab, DarkPrismarine.Stairs,
+
+    EndStoneBrick.Block, EndStoneBrick.Slab, EndStoneBrick.Stairs,
+    Purpur.Block, Purpur.Slab, Purpur.Stairs,
+
+
+    OxidizedCopper.Block, OxidizedCopper.Slab,
+    OxidizedCutCopper.Block, OxidizedCutCopper.Slab, OxidizedCutCopper.Stairs,
+    WaxedOxidizedCutCopper.Block, WaxedOxidizedCutCopper.Slab, WaxedOxidizedCutCopper.Stairs,
+    WeatheredCopper.Block, WeatheredCopper.Slab,
+    WeatheredCutCopper.Block, WeatheredCutCopper.Slab, WeatheredCutCopper.Stairs,
+    WaxedWeatheredCutCopper.Block, WaxedWeatheredCutCopper.Slab, WaxedWeatheredCutCopper.Stairs,
+    ExposedCopper.Block, ExposedCopper.Slab,
+    ExposedCutCopper.Block, ExposedCutCopper.Slab, ExposedCutCopper.Stairs,
+    WaxedExposedCutCopper.Block, WaxedExposedCutCopper.Slab, WaxedExposedCutCopper.Stairs,
+    CutCopper.Block, CutCopper.Slab, CutCopper.Stairs,
+    WaxedCutCopper.Block, WaxedCutCopper.Slab, WaxedCutCopper.Stairs,
+
+    Dirt,
+    GrassBlock,
+
+    WaterFluidBlock, BubbleColumnBlock, LavaFluidBlock,
+
+    SlimeBlock, HoneyBlock,
+
+    CobwebBlock,
+
+    WoolBlock.White, WoolBlock.Orange, WoolBlock.Magenta, WoolBlock.LightBlue, WoolBlock.Yellow, WoolBlock.Lime, WoolBlock.Pink, WoolBlock.Gray, WoolBlock.LightGray, WoolBlock.Cyan, WoolBlock.Purple, WoolBlock.Blue, WoolBlock.Brown, WoolBlock.Green, WoolBlock.Green, WoolBlock.Red, WoolBlock.Black,
+    CarpetBlock.White, CarpetBlock.Orange, CarpetBlock.Magenta, CarpetBlock.LightBlue, CarpetBlock.Yellow, CarpetBlock.Lime, CarpetBlock.Pink, CarpetBlock.Gray, CarpetBlock.LightGray, CarpetBlock.Cyan, CarpetBlock.Purple, CarpetBlock.Blue, CarpetBlock.Brown, CarpetBlock.Green, CarpetBlock.Green, CarpetBlock.Red, CarpetBlock.Black,
+
+    ScaffoldingBlock,
+
+    PowderSnowBlock,
+
+    DoorBlock.IronDoor,
+
+    Oak.Leaves, Oak.Door, Oak.PetrifiedSlab, Oak.Slab, Oak.Planks, Oak.Fence, Oak.Stairs,
+    Spruce.Leaves, Spruce.Door, Spruce.Slab, Spruce.Planks, Spruce.Fence, Spruce.Stairs,
+    Birch.Leaves, Birch.Door, Birch.Slab, Birch.Planks, Birch.Fence, Birch.Stairs,
+    Jungle.Leaves, Jungle.Door, Jungle.Slab, Jungle.Planks, Jungle.Fence, Jungle.Stairs,
+    Acacia.Leaves, Acacia.Door, Acacia.Slab, Acacia.Planks, Acacia.Fence, Acacia.Stairs,
+    DarkOak.Leaves, DarkOak.Door, DarkOak.Slab, DarkOak.Planks, DarkOak.Fence, DarkOak.Stairs,
+    Mangrove.Leaves, Mangrove.Door, Mangrove.Slab, Mangrove.Planks, Mangrove.Fence, Mangrove.Stairs,
+    Cherry.Leaves, Cherry.Door, Cherry.Slab, Cherry.Planks, Cherry.Fence, Cherry.Stairs,
+    Azalea.Leaves, Azalea.Door, Azalea.Slab, Azalea.Planks, Azalea.Fence, Azalea.Stairs,
+    FloweringAzalea.Leaves, FloweringAzalea.Door, FloweringAzalea.Slab, FloweringAzalea.Planks, FloweringAzalea.Fence, FloweringAzalea.Stairs,
+    Bamboo.Leaves, Bamboo.Door, Bamboo.Slab, Bamboo.Planks, Bamboo.Fence, Bamboo.Stairs,
+    BambooMosaic.Slab, BambooMosaic.Slab, BambooMosaic.Stairs,
+    Crimson.Leaves, Crimson.Door, Crimson.Slab, Crimson.Planks, Crimson.Fence, Crimson.Stairs,
+    Warped.Leaves, Warped.Door, Warped.Slab, Warped.Planks, Warped.Fence, Warped.Stairs,
+
+    SnowBlock, SnowLayerBlock,
+    FernBlock.DeadBush, FernBlock.Grass, FernBlock.ShortGrass, FernBlock.Fern,
+    DoublePlant.Sunflower, DoublePlant.Lilac, DoublePlant.TallGrass, DoublePlant.LargeFern, DoublePlant.RoseBush, DoublePlant.Peony, DoublePlant.UpperBlock,
+    FlowerBlock.Dandelion, FlowerBlock.Torchflower, FlowerBlock.Poppy, FlowerBlock.BlueOrchid, FlowerBlock.Allium, FlowerBlock.AzureBluet, FlowerBlock.RedTulip, FlowerBlock.OrangeTulip, FlowerBlock.WhiteTulip, FlowerBlock.PinkTulip, FlowerBlock.OxeyeDaisy, FlowerBlock.Cornflower, FlowerBlock.WitherRose, FlowerBlock.LilyOfTheValley,
+
+
+    WoodenChestBlock.Chest, WoodenChestBlock.TrappedChest, EnderChestBlock,
+    ShulkerBoxBlock, ShulkerBoxBlock.White, ShulkerBoxBlock.Orange, ShulkerBoxBlock.Magenta, ShulkerBoxBlock.LightBlue, ShulkerBoxBlock.Yellow, ShulkerBoxBlock.Lime, ShulkerBoxBlock.Pink, ShulkerBoxBlock.Gray, ShulkerBoxBlock.LightGray, ShulkerBoxBlock.Cyan, ShulkerBoxBlock.Purple, ShulkerBoxBlock.Blue, ShulkerBoxBlock.Brown, ShulkerBoxBlock.Green, ShulkerBoxBlock.Green, ShulkerBoxBlock.Red, ShulkerBoxBlock.Black,
+
+    Glowstone, Netherrack, SoulSand, SoulSoil,
+
+    RedstoneTorchBlock.Standing, RedstoneTorchBlock.Wall,
+    TorchBlock.NormalTorchBlock.Standing, TorchBlock.NormalTorchBlock.Wall,
+    TorchBlock.SoulTorchBlock.Standing, TorchBlock.SoulTorchBlock.Wall,
+
+    NetherPortalBlock,
+) {
+
+    fun build(name: ResourceLocation, registries: Registries, settings: BlockSettings): Block? {
+        return this[name]?.build(registries, settings)
+    }
+}
