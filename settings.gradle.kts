@@ -12,7 +12,8 @@
  */
 
 rootProject.name = "Blokr"
-include(":app", ":minosoft-core")
+include(":app", ":minosoft-engine")
+project(":minosoft-engine").projectDir = file("minosoft-core")
 
 pluginManagement {
     repositories {
