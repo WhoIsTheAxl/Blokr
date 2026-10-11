@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:glEsVersion="0x00030000" android:required="true" />
     <application
         android:allowBackup="false"
         android:label="Blokr"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <activity android:name="com.blokr.app.view.activities.GameActivity" android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true">
