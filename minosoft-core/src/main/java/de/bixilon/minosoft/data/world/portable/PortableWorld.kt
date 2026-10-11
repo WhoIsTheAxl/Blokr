@@ -69,6 +69,47 @@ class PortableWorld {
         if (nonAir.isEmpty()) sections.remove(key) else sections[key] = nonAir
     }
 
+    /** Section coordinates currently containing non-air blocks; returned as a snapshot. */
+    data class SectionPosition(val x: Int, val y: Int, val z: Int)
+
+    /** Returns a stable snapshot; no internal mutable collections escape. */
+    @Synchronized
+    fun sectionPositions(): Set<SectionPosition> =
+        sections.keys.mapTo(LinkedHashSet()) { SectionPosition(it.x, it.y, it.z) }
+
+    /** Removes all sections in a horizontal chunk column, including negative coordinates. */
+    @Synchronized
+    fun unloadChunk(chunkX: Int, chunkZ: Int): Int {
+        val keys = sections.keys.filter { it.x == chunkX && it.z == chunkZ }
+        keys.forEach { sections.remove(it) }
+        return keys.size
+    }
+
+    /** Returns a snapshot of the populated section Y coordinates in a chunk column. */
+    @Synchronized
+    fun chunkSectionYs(chunkX: Int, chunkZ: Int): Set<Int> =
+        sections.keys.filter { it.x == chunkX && it.z == chunkZ }.mapTo(LinkedHashSet()) { it.y }
+
+    /** Atomically replaces a complete chunk column. Missing section Ys become air. */
+    @Synchronized
+    fun replaceChunk(chunkX: Int, chunkZ: Int, sectionStates: Map<Int, IntArray>) {
+        val minSection = Math.floorDiv(ChunkSize.CHUNK_MIN_Y, 16)
+        val maxSection = Math.floorDiv(ChunkSize.CHUNK_MAX_Y - 1, 16)
+        val replacements = HashMap<SectionKey, MutableMap<Int, Int>>()
+        for ((sectionY, states) in sectionStates) {
+            require(sectionY in minSection..maxSection) { "Section Y outside world range" }
+            require(states.size == ChunkSize.BLOCKS_PER_SECTION) { "Expected 4096 block states" }
+            val nonAir = HashMap<Int, Int>()
+            states.forEachIndexed { index, stateId ->
+                require(stateId >= 0) { "Block state IDs must be nonnegative" }
+                if (stateId != 0) nonAir[index] = stateId
+            }
+            if (nonAir.isNotEmpty()) replacements[SectionKey(chunkX, sectionY, chunkZ)] = nonAir
+        }
+        unloadChunk(chunkX, chunkZ)
+        sections.putAll(replacements)
+    }
+
     @Synchronized
     fun loadedSections(): Int = sections.size
 
