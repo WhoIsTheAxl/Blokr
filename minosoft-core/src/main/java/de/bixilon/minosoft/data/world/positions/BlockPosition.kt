@@ -7,6 +7,8 @@ package de.bixilon.minosoft.data.world.positions
 /** Minosoft packed 26-bit X/Z and 12-bit Y block coordinates. */
 @JvmInline
 value class BlockPosition(val raw: Long) {
+    constructor() : this(0, 0, 0)
+    constructor(position: InChunkPosition) : this(position.x, position.y, position.z)
     constructor(x: Int, y: Int, z: Int) : this(
         ((y.toLong() and MASK_Y.toLong()) shl SHIFT_Y) or
         ((z.toLong() and MASK_Z.toLong()) shl SHIFT_Z) or
@@ -15,6 +17,14 @@ value class BlockPosition(val raw: Long) {
         require(x in -MAX_X..MAX_X && z in -MAX_Z..MAX_Z)
         require(y in MIN_Y..MAX_Y)
     }
+    fun modify(other: Long, component: Long, add: Long): BlockPosition {
+        val preserved = raw and other
+        val modified = ((raw and component) + add) and component
+        return BlockPosition(preserved or modified)
+    }
+    fun modifyX(add: Long) = modify(((MASK_Y.toLong() shl SHIFT_Y) or (MASK_Z.toLong() shl SHIFT_Z)), MASK_X.toLong(), add)
+    fun modifyY(add: Long) = modify((MASK_X.toLong() or (MASK_Z.toLong() shl SHIFT_Z)), MASK_Y.toLong() shl SHIFT_Y, add)
+    fun modifyZ(add: Long) = modify((MASK_X.toLong() or (MASK_Y.toLong() shl SHIFT_Y)), MASK_Z.toLong() shl SHIFT_Z, add)
     val x: Int get() = (((raw ushr SHIFT_X).toInt() and MASK_X) shl 6) shr 6
     val y: Int get() = (((raw ushr SHIFT_Y).toInt() and MASK_Y) shl 20) shr 20
     val z: Int get() = (((raw ushr SHIFT_Z).toInt() and MASK_Z) shl 6) shr 6
@@ -59,6 +69,12 @@ value class BlockPosition(val raw: Long) {
         const val BITS_Y = 12
         const val MASK_Y = (1 shl BITS_Y) - 1
         const val SHIFT_Y = 52
+        const val X = 1L shl SHIFT_X
+        const val Z = 1L shl SHIFT_Z
+        const val Y = 1L shl SHIFT_Y
+        fun Int.clampX() = coerceIn(-MAX_X + 1, MAX_X - 1)
+        fun Int.clampY() = coerceIn(MIN_Y + 1, MAX_Y - 1)
+        fun Int.clampZ() = coerceIn(-MAX_Z + 1, MAX_Z - 1)
         const val MAX_X = 30_000_000
         const val MAX_Z = 30_000_000
         const val MIN_Y = -2048
