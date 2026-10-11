@@ -27,9 +27,14 @@ import de.bixilon.minosoft.protocol.protocol.buffers.KUtilBufferProbe;
 import de.bixilon.minosoft.protocol.network.AndroidPacketFraming;
 import de.bixilon.minosoft.protocol.network.AndroidNettyFramingProbe;
 import com.blokr.app.view.activities.GameActivity;
+import com.blokr.app.ui.UIFactory;
+import com.blokr.app.ui.UIManager;
+import com.blokr.app.lifecycle.BlokrLifecycleManager;
 
 /** Android launcher for the bridge and graphics bootstrap. */
 public final class MainActivity extends Activity {
+    private UIManager uiManager;
+    private BlokrLifecycleManager lifecycleManager;
     private final Handler diagnosticHandler = new Handler(Looper.getMainLooper());
     private final Runnable heartbeat = new Runnable() {
         @Override public void run() {
@@ -50,7 +55,21 @@ public final class MainActivity extends Activity {
             + "; action=" + (launchIntent == null ? "null" : launchIntent.getAction())
             + "; flags=" + (launchIntent == null ? "null" : Integer.toHexString(launchIntent.getFlags())));
         Diagnostics.info("StartupStage", "01 creating launcher layout");
-        LinearLayout layout = new LinearLayout(this);
+        UIFactory uiFactory = new UIFactory(this);
+        uiManager = new UIManager(this);
+        lifecycleManager = new BlokrLifecycleManager();
+        lifecycleManager.register(new BlokrLifecycleManager.ManagedResource() {
+            @Override public String name() { return "LauncherUI"; }
+            @Override public void start() {}
+            @Override public void stop() { uiManager.dispose(); }
+        });
+        try {
+            lifecycleManager.start();
+        } catch (Exception failure) {
+            Diagnostics.error("MainActivity", "Launcher infrastructure failed", failure);
+            throw new IllegalStateException("Launcher infrastructure failed", failure);
+        }
+        LinearLayout layout = uiFactory.column();
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setGravity(Gravity.CENTER);
         int padding = (int) (24 * getResources().getDisplayMetrics().density);
@@ -128,11 +147,16 @@ public final class MainActivity extends Activity {
         });
         layout.addView(connect);
         Diagnostics.info("StartupStage", "03 controls created; attaching scroll container");
-        ScrollView scroll = new ScrollView(this);
+        ScrollView scroll = uiFactory.page();
         scroll.setFillViewport(true);
-        scroll.addView(layout);
+        uiFactory.pageContent(scroll, layout);
         Diagnostics.info("StartupStage", "04 before setContentView");
-        setContentView(scroll);
+        uiManager.register("launcher", factory -> scroll);
+        if (savedInstanceState != null && "launcher".equals(savedInstanceState.getString("blokr.ui.current"))) {
+            uiManager.restoreState(savedInstanceState);
+        } else {
+            uiManager.show("launcher");
+        }
         Diagnostics.info("StartupStage", "05 after setContentView");
         scroll.getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
             private boolean first = true;
@@ -303,6 +327,7 @@ public final class MainActivity extends Activity {
 
     @Override protected void onSaveInstanceState(Bundle outState) {
         Diagnostics.info("MainActivityLifecycle", "onSaveInstanceState");
+        if (uiManager != null) uiManager.saveState(outState);
         super.onSaveInstanceState(outState);
     }
 
@@ -330,7 +355,11 @@ public final class MainActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
-        diagnosticHandler.removeCallbacks(heartbeat);
+        diagnosticHandler.removeCallbacksAndMessages(null);
+        if (lifecycleManager != null) {
+            BlokrLifecycleManager.ShutdownReport report = lifecycleManager.shutdown();
+            if (!report.successful()) Diagnostics.warn("MainActivityLifecycle", "UI cleanup failures=" + report.failures().size());
+        }
         Diagnostics.info("MainActivityLifecycle", "onDestroy; finishing=" + isFinishing()
             + "; changingConfigurations=" + isChangingConfigurations());
         super.onDestroy();
