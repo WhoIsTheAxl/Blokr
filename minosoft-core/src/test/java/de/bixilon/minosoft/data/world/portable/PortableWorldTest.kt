@@ -54,4 +54,45 @@ class PortableWorldTest {
         assertEquals(0L, world.tickCount)
         assertEquals(0, world.loadedSections())
     }
+    @Test fun chunkReplacementIsAtomicAndIsolated() {
+        val world = PortableWorld()
+        world.setBlock(-1, 0, -1, 5)
+        world.setBlock(0, 0, 0, 8)
+        val states = IntArray(4096)
+        states[0] = 12
+        world.replaceChunk(-1, -1, mapOf(0 to states))
+        states[0] = 99
+        assertEquals(12, world.getBlock(-16, 0, -16))
+        assertEquals(0, world.getBlock(-1, 0, -1))
+        assertEquals(8, world.getBlock(0, 0, 0))
+        assertEquals(setOf(0), world.chunkSectionYs(-1, -1))
+        assertEquals(1, world.unloadChunk(-1, -1))
+        assertTrue(world.chunkSectionYs(-1, -1).isEmpty())
+        assertEquals(8, world.getBlock(0, 0, 0))
+    }
+
+    @Test fun invalidChunkReplacementKeepsExistingSections() {
+        val world = PortableWorld()
+        world.setBlock(1, 1, 1, 7)
+        val good = IntArray(4096) { 2 }
+        val bad = IntArray(4096).also { it[4095] = -1 }
+        try {
+            world.replaceChunk(0, 0, mapOf(0 to good, 1 to bad))
+            fail("Expected invalid state rejection")
+        } catch (_: IllegalArgumentException) {}
+        assertEquals(7, world.getBlock(1, 1, 1))
+        assertEquals(0, world.getBlock(0, 16, 0))
+        assertEquals(1, world.loadedSections())
+    }
+
+    @Test fun sectionPositionSnapshotsAreIndependent() {
+        val world = PortableWorld()
+        world.setBlock(-1, -1, -1, 1)
+        val positions = world.sectionPositions()
+        assertEquals(setOf(PortableWorld.SectionPosition(-1, -1, -1)), positions)
+        world.clear()
+        assertEquals(1, positions.size)
+        assertTrue(world.sectionPositions().isEmpty())
+    }
+
 }
