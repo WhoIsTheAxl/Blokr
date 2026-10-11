@@ -33,7 +33,7 @@ public final class MainActivity extends Activity {
         layout.setPadding(padding, padding, padding, padding);
 
         ImageView logo = new ImageView(this);
-        logo.setImageResource(com.blokr.app.R.drawable.blokr_logo);
+        logo.setImageResource(R.drawable.blokr_logo);
         int logoSize = (int) (96 * getResources().getDisplayMetrics().density);
         LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(logoSize, logoSize);
         logoParams.gravity = Gravity.CENTER_HORIZONTAL;
