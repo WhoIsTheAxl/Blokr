@@ -12,7 +12,7 @@
  */
 
 rootProject.name = "Blokr"
-include(":app")
+include(":app", ":minosoft-core")
 
 pluginManagement {
     repositories {
