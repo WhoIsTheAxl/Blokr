@@ -24,4 +24,5 @@ dependencies {
     implementation("io.netty:netty-buffer:4.1.115.Final")
     implementation("io.netty:netty-transport:4.1.115.Final")
     implementation("io.netty:netty-codec:4.1.115.Final")
+    testImplementation("junit:junit:4.13.2")
 }
