@@ -7,6 +7,10 @@ import android.view.Gravity;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.EditText;
+import android.os.Handler;
+import android.os.Looper;
+import com.blokr.app.bridge.NetworkTransportProbe;
 
 import com.blokr.app.bridge.MinosoftBridge;
 import com.blokr.app.bridge.MinosoftCoreProbe;
@@ -32,7 +36,8 @@ public final class MainActivity extends Activity {
         Diagnostics.info("MinosoftProtocol", protocolStatus);
         status.setText("Blokr\nAndroid bootstrap ready\nMinosoft: "
             + MinosoftBridge.getInstance().getState()
-            + "\n" + MinosoftCoreProbe.check());
+            + "\n" + MinosoftCoreProbe.check()
+            + "\n" + protocolStatus);
         status.setTextSize(22);
         status.setGravity(Gravity.CENTER);
         layout.addView(status);
@@ -42,6 +47,55 @@ public final class MainActivity extends Activity {
         graphics.setOnClickListener(v ->
             startActivity(new Intent(this, GameActivity.class)));
         layout.addView(graphics);
+        EditText host = new EditText(this);
+        host.setSingleLine(true);
+        host.setHint("Server hostname");
+        layout.addView(host);
+
+        EditText port = new EditText(this);
+        port.setSingleLine(true);
+        port.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        port.setText("25565");
+        layout.addView(port);
+
+        TextView networkStatus = new TextView(this);
+        networkStatus.setText("TCP diagnostic only — no Minecraft handshake");
+        layout.addView(networkStatus);
+
+        Button connect = new Button(this);
+        connect.setText("Test TCP Connection");
+        connect.setOnClickListener(v -> {
+            final String target = host.getText().toString().trim();
+            final String portText = port.getText().toString().trim();
+            final int targetPort;
+            try {
+                targetPort = Integer.parseInt(portText);
+                if (targetPort < 1 || targetPort > 65535) throw new NumberFormatException();
+                if (target.isEmpty()) throw new IllegalArgumentException("Enter a hostname");
+            } catch (RuntimeException invalid) {
+                networkStatus.setText("Enter a valid hostname and port (1–65535)");
+                return;
+            }
+            connect.setEnabled(false);
+            networkStatus.setText("Connecting...");
+            Handler main = new Handler(Looper.getMainLooper());
+            new Thread(() -> {
+                String result;
+                try {
+                    result = NetworkTransportProbe.connect(target, targetPort, 5000);
+                    Diagnostics.info("NetworkProbe", "TCP connection succeeded; port=" + targetPort);
+                } catch (Exception failure) {
+                    result = "TCP connection failed: " + failure.getClass().getSimpleName();
+                    Diagnostics.warn("NetworkProbe", result);
+                }
+                final String display = result;
+                main.post(() -> {
+                    networkStatus.setText(display);
+                    connect.setEnabled(true);
+                });
+            }, "Blokr-TCP-Probe").start();
+        });
+        layout.addView(connect);
         setContentView(layout);
     }
 }
