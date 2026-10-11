@@ -24,6 +24,15 @@ public final class MinosoftBridge {
         return state;
     }
 
+    /**
+     * Returns the attached graphics integration, if one exists.
+     * No desktop Minosoft classes are loaded by this boundary.
+     */
+    public synchronized MinosoftGraphicsRuntime graphics() {
+        return runtime instanceof MinosoftGraphicsRuntime
+            ? (MinosoftGraphicsRuntime) runtime : null;
+    }
+
     public synchronized boolean isAvailable() {
         return runtime != null;
     }
