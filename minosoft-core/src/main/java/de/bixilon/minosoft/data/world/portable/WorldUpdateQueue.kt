@@ -41,7 +41,7 @@ class WorldUpdateQueue(private val maxPending: Int = 1024) {
         require(limit >= 0) { "Drain limit must be nonnegative" }
         var applied = 0
         while (applied < limit && pending.isNotEmpty()) {
-            when (val command = pending.first) {
+            when (val command = pending.peekFirst()) {
                 is Command.BlockBatch -> world.applyBlockUpdates(command.updates)
                 is Command.ReplaceChunk -> world.replaceChunk(command.x, command.z, command.sections)
                 is Command.UnloadChunk -> world.unloadChunk(command.x, command.z)
