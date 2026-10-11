@@ -1,5 +1,5 @@
 plugins {
-    id("com.android.application") version "8.11.1"
+    id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
 
@@ -8,7 +8,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.blokr"
+        applicationId = "com.blokr.app"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
