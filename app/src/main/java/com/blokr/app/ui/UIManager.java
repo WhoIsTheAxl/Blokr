@@ -2,6 +2,8 @@ package com.blokr.app.ui;
 
 import android.app.Activity;
 import android.os.Looper;
+import android.os.Bundle;
+import java.util.ArrayList;
 import android.view.View;
 import java.util.ArrayDeque;
 import java.util.HashMap;
@@ -68,6 +70,36 @@ public final class UIManager {
         history.pop();
         current = previous;
         return true;
+    }
+
+    /** Call from Activity.onSaveInstanceState; register screens again after recreation. */
+    public void saveState(Bundle out) {
+        assertMainThread();
+        if (out == null) throw new IllegalArgumentException("out == null");
+        out.putString("blokr.ui.current", current);
+        out.putStringArrayList("blokr.ui.history", new ArrayList<>(history));
+    }
+
+    /** Call after registering screens in a recreated Activity. */
+    public void restoreState(Bundle saved) {
+        assertMainThread();
+        if (saved == null) return;
+        String target = saved.getString("blokr.ui.current");
+        if (target == null) return;
+        if (!screens.containsKey(target))
+            throw new IllegalArgumentException("Unregistered restored screen: " + target);
+        ArrayList<String> previous = saved.getStringArrayList("blokr.ui.history");
+        if (previous != null) {
+            for (String key : previous)
+                if (key == null || !screens.containsKey(key))
+                    throw new IllegalArgumentException("Unregistered history screen: " + key);
+        }
+        View view = screens.get(target).create(factory);
+        if (view == null) throw new IllegalStateException("Screen returned null: " + target);
+        activity.setContentView(view);
+        history.clear();
+        if (previous != null) history.addAll(previous);
+        current = target;
     }
 
     public String currentScreen() { return current; }
