@@ -39,6 +39,8 @@ public final class MainActivity extends Activity {
         }
     };
 
+    private static final String EXTRA_FULL_MODE = "com.blokr.debug.FULL_MODE";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -51,6 +53,34 @@ public final class MainActivity extends Activity {
             + "; flags=" + (launchIntent == null ? "null" : Integer.toHexString(launchIntent.getFlags()))
             + "; categories=" + (launchIntent == null ? "null" : launchIntent.getCategories()));
 
+        // Default to a completely isolated launcher. The full bootstrap is opt-in.
+        boolean fullMode = launchIntent != null && launchIntent.getBooleanExtra(EXTRA_FULL_MODE, false);
+        Diagnostics.info("IsolationTest", "mode=" + (fullMode ? "FULL_DELAYED" : "MINIMAL")
+            + "; pid=" + Process.myPid() + "; task=" + getTaskId());
+        if (!fullMode) {
+            TextView title = new TextView(this);
+            title.setText("BLOKR\nMinimal launcher diagnostic\nNo Minosoft or protocol probes");
+            title.setTextSize(23);
+            title.setGravity(Gravity.CENTER);
+            Button startFull = new Button(this);
+            startFull.setText("Run full launcher (5-second delay)");
+            startFull.setOnClickListener(v -> {
+                Diagnostics.info("IsolationTest", "User requested FULL_DELAYED mode");
+                Intent full = new Intent(this, MainActivity.class);
+                full.putExtra(EXTRA_FULL_MODE, true);
+                startActivity(full);
+            });
+            LinearLayout minimal = new LinearLayout(this);
+            minimal.setOrientation(LinearLayout.VERTICAL);
+            minimal.setGravity(Gravity.CENTER);
+            minimal.addView(title);
+            minimal.addView(startFull);
+            Diagnostics.info("IsolationTest", "MINIMAL before setContentView");
+            setContentView(minimal);
+            Diagnostics.info("IsolationTest", "MINIMAL after setContentView; wait 15 seconds");
+            return;
+        }
+        Diagnostics.info("IsolationTest", "FULL_DELAYED layout initialization begins");
         Diagnostics.info("StartupStage", "01 creating launcher layout");
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -148,7 +178,15 @@ public final class MainActivity extends Activity {
             }
         });
         scroll.post(() -> Diagnostics.info("RenderStage", "view posted callback; shown=" + scroll.isShown()));
-        startProtocolDiagnostics(status);
+        Diagnostics.info("IsolationTest", "FULL_DELAYED probes scheduled for +5000ms");
+        diagnosticHandler.postDelayed(() -> {
+            if (!isFinishing() && !isDestroyed()) {
+                Diagnostics.info("IsolationTest", "FULL_DELAYED probes starting after 5 seconds");
+                startProtocolDiagnostics(status);
+            } else {
+                Diagnostics.warn("IsolationTest", "FULL_DELAYED probes skipped: activity finishing/destroyed");
+            }
+        }, 5000);
     }
 
     private void startProtocolDiagnostics(TextView status) {
