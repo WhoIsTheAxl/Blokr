@@ -20,6 +20,21 @@ value class SectionPosition(val raw: Long) {
     val chunkPosition: ChunkPosition get() = ChunkPosition(x, z)
     fun sectionIndex(minSection: SectionHeight): SectionIndex = y - minSection
     fun with(x: Int = this.x, y: Int = this.y, z: Int = this.z) = SectionPosition(x, y, z)
+    fun plusX(delta: Int = 1) = with(x = x + delta)
+    fun plusY(delta: Int = 1) = with(y = y + delta)
+    fun plusZ(delta: Int = 1) = with(z = z + delta)
+    fun minusX() = plusX(-1)
+    fun minusY() = plusY(-1)
+    fun minusZ() = plusZ(-1)
+    operator fun plus(value: Int) = SectionPosition(x + value, y + value, z + value)
+    operator fun minus(value: Int) = SectionPosition(x - value, y - value, z - value)
+    operator fun times(value: Int) = SectionPosition(x * value, y * value, z * value)
+    operator fun div(value: Int) = SectionPosition(x / value, y / value, z / value)
+    operator fun plus(other: ChunkPosition) = SectionPosition(x + other.x, y, z + other.z)
+    operator fun minus(other: ChunkPosition) = SectionPosition(x - other.x, y, z - other.z)
+    operator fun unaryMinus() = SectionPosition(-x, -y, -z)
+    operator fun unaryPlus() = this
+    fun length2() = x.toLong() * x + y.toLong() * y + z.toLong() * z
     operator fun plus(other: SectionPosition) = SectionPosition(x + other.x, y + other.y, z + other.z)
     operator fun minus(other: SectionPosition) = SectionPosition(x - other.x, y - other.y, z - other.z)
     operator fun component1() = x
@@ -41,6 +56,8 @@ value class SectionPosition(val raw: Long) {
         const val MIN_Y = BlockPosition.MIN_Y shr 4
         const val MAX_Y = BlockPosition.MAX_Y shr 4
         val EMPTY = SectionPosition(0, 0, 0)
+        fun of(chunk: ChunkPosition, index: SectionIndex, minSection: SectionHeight) =
+            SectionPosition(chunk.x, index + minSection, chunk.z)
         fun of(chunk: ChunkPosition, height: SectionHeight) = SectionPosition(chunk.x, height, chunk.z)
     }
 }
