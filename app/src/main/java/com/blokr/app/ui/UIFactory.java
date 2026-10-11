@@ -97,6 +97,15 @@ public final class UIFactory {
         return page;
     }
 
+    /** Creates a container that automatically reflows when its measured width changes. */
+    public ResponsiveLayout layout(LayoutPolicy.Mode mode, int minCellDp, int gapDp, int maxColumns) {
+        return new ResponsiveLayout(context, mode, minCellDp, gapDp, maxColumns);
+    }
+
+    public ResponsiveLayout adaptiveLayout() {
+        return layout(LayoutPolicy.Mode.ADAPTIVE, 180, 12, 3);
+    }
+
     public boolean isLandscape() {
         return context.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
     }
