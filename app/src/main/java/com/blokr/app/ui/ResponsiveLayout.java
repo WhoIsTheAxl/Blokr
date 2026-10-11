@@ -4,11 +4,7 @@ import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
 
-/**
- * Wrap-content responsive layout with vertical, horizontal, grid and adaptive modes.
- * Re-measures and reflows children when the available width changes, including rotation.
- * Place inside a ScrollView for long content. Child widths are managed by this layout.
- */
+/** Responsive, wrapping grid that reflows visible children on width changes. */
 public final class ResponsiveLayout extends ViewGroup {
     private final LayoutPolicy.Mode mode;
     private final int minCellPx;
@@ -30,66 +26,75 @@ public final class ResponsiveLayout extends ViewGroup {
 
     public int getResolvedColumns() { return columns; }
 
+    private int visibleCount() {
+        int count = 0;
+        for (int i = 0; i < getChildCount(); i++)
+            if (getChildAt(i).getVisibility() != GONE) count++;
+        return count;
+    }
+
+    private int availableWidth(int width) {
+        return Math.max(0, width - getPaddingLeft() - getPaddingRight());
+    }
+
     @Override protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        int widthMode = MeasureSpec.getMode(widthMeasureSpec);
         int width = MeasureSpec.getSize(widthMeasureSpec);
-        if (widthMode == MeasureSpec.UNSPECIFIED)
+        if (MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.UNSPECIFIED)
             width = getPaddingLeft() + getPaddingRight() + minCellPx;
-        int available = Math.max(0, width - getPaddingLeft() - getPaddingRight());
-        int proposed = LayoutPolicy.columns(mode,
-                Math.round(available / getResources().getDisplayMetrics().density),
-                Math.max(1, Math.round(minCellPx / getResources().getDisplayMetrics().density)), maxColumns);
-        columns = mode == LayoutPolicy.Mode.HORIZONTAL
-                ? Math.max(1, Math.min(proposed, Math.max(1, getChildCount()))) : proposed;
+        int available = availableWidth(width);
+        int count = visibleCount();
+        int proposed = LayoutPolicy.columnsForPixels(mode, available, minCellPx, gapPx, maxColumns);
+        columns = Math.max(1, Math.min(proposed, Math.max(1, count)));
         int cell = LayoutPolicy.cellWidth(available, columns, gapPx);
-        int[] rowHeights = new int[(getChildCount() + columns - 1) / columns];
+        int rows = (count + columns - 1) / columns;
+        int[] heights = new int[rows];
+        int visibleIndex = 0;
         for (int i = 0; i < getChildCount(); i++) {
             View child = getChildAt(i);
             if (child.getVisibility() == GONE) continue;
-            child.measure(MeasureSpec.makeMeasureSpec(cell, MeasureSpec.EXACTLY),
-                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
-            int row = i / columns;
-            rowHeights[row] = Math.max(rowHeights[row], child.getMeasuredHeight());
+            ViewGroup.LayoutParams params = child.getLayoutParams();
+            int childHeight = params != null && params.height >= 0
+                    ? MeasureSpec.makeMeasureSpec(params.height, MeasureSpec.EXACTLY)
+                    : MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
+            child.measure(MeasureSpec.makeMeasureSpec(cell, MeasureSpec.EXACTLY), childHeight);
+            int row = visibleIndex++ / columns;
+            heights[row] = Math.max(heights[row], child.getMeasuredHeight());
         }
-        int height = getPaddingTop() + getPaddingBottom();
-        for (int rowHeight : rowHeights) height += rowHeight;
-        if (rowHeights.length > 1) height += (rowHeights.length - 1) * gapPx;
-        setMeasuredDimension(resolveSize(width, widthMeasureSpec), resolveSize(height, heightMeasureSpec));
+        long height = (long) getPaddingTop() + getPaddingBottom();
+        for (int rowHeight : heights) height += rowHeight;
+        if (rows > 1) height += (long) (rows - 1) * gapPx;
+        setMeasuredDimension(resolveSize(width, widthMeasureSpec),
+                resolveSize((int) Math.min(Integer.MAX_VALUE, height), heightMeasureSpec));
     }
 
     @Override protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-        int available = Math.max(0, getWidth() - getPaddingLeft() - getPaddingRight());
-        int cell = LayoutPolicy.cellWidth(available, columns, gapPx);
+        int cell = LayoutPolicy.cellWidth(availableWidth(getWidth()), columns, gapPx);
         int y = getPaddingTop();
-        int count = getChildCount();
-        for (int start = 0; start < count; start += columns) {
-            int rowHeight = 0;
-            for (int i = start; i < Math.min(start + columns, count); i++) {
-                View child = getChildAt(i);
-                if (child.getVisibility() != GONE) rowHeight = Math.max(rowHeight, child.getMeasuredHeight());
+        int visibleIndex = 0;
+        int rowHeight = 0;
+        for (int i = 0; i < getChildCount(); i++) {
+            View child = getChildAt(i);
+            if (child.getVisibility() == GONE) continue;
+            int col = visibleIndex % columns;
+            if (col == 0 && visibleIndex > 0) {
+                y += rowHeight + gapPx;
+                rowHeight = 0;
             }
-            for (int i = start; i < Math.min(start + columns, count); i++) {
-                View child = getChildAt(i);
-                if (child.getVisibility() == GONE) continue;
-                int col = i - start;
-                int x = getPaddingLeft() + col * (cell + gapPx);
-                child.layout(x, y, x + cell, y + child.getMeasuredHeight());
-            }
-            y += rowHeight + gapPx;
+            int x = getPaddingLeft() + col * (cell + gapPx);
+            child.layout(x, y, x + cell, y + child.getMeasuredHeight());
+            rowHeight = Math.max(rowHeight, child.getMeasuredHeight());
+            visibleIndex++;
         }
     }
 
     @Override protected LayoutParams generateDefaultLayoutParams() {
         return new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
     }
-
     @Override protected LayoutParams generateLayoutParams(LayoutParams params) {
         return new LayoutParams(params);
     }
-
     @Override public LayoutParams generateLayoutParams(android.util.AttributeSet attrs) {
         return new LayoutParams(getContext(), attrs);
     }
-
     @Override protected boolean checkLayoutParams(LayoutParams params) { return params != null; }
 }
