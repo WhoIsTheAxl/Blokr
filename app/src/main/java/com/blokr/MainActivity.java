@@ -8,6 +8,7 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.os.Handler;
 import android.os.Looper;
 import com.blokr.app.bridge.NetworkTransportProbe;
@@ -30,6 +31,14 @@ public final class MainActivity extends Activity {
         layout.setGravity(Gravity.CENTER);
         int padding = (int) (24 * getResources().getDisplayMetrics().density);
         layout.setPadding(padding, padding, padding, padding);
+
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(com.blokr.app.R.drawable.blokr_logo);
+        int logoSize = (int) (96 * getResources().getDisplayMetrics().density);
+        LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(logoSize, logoSize);
+        logoParams.gravity = Gravity.CENTER_HORIZONTAL;
+        logoParams.bottomMargin = (int) (12 * getResources().getDisplayMetrics().density);
+        layout.addView(logo, logoParams);
 
         TextView status = new TextView(this);
         String protocolStatus = AndroidProtocolProbe.check();
