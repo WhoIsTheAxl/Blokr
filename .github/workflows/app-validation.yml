@@ -29,7 +29,7 @@ jobs:
       - name: Install Android SDK
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Run core unit tests
-        run: bash ./gradlew :minosoft-core:testDebugUnitTest --stacktrace
+        run: bash ./gradlew :minosoft-engine:testDebugUnitTest --stacktrace
       - name: Build app and instrumentation APKs
         run: bash ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest --stacktrace
       - name: Upload unit test reports
