@@ -10,6 +10,7 @@ value class InSectionPosition(val index: Int) {
     constructor(x: Int, y: Int, z: Int) : this((y shl SHIFT_Y) or (z shl SHIFT_Z) or x) {
         require(x in 0..15 && y in 0..15 && z in 0..15)
     }
+    init { require(index in 0..4095) { "section index out of range: $index" } }
     val x: Int get() = (index ushr SHIFT_X) and MASK_X
     val y: Int get() = (index ushr SHIFT_Y) and MASK_Y
     val z: Int get() = (index ushr SHIFT_Z) and MASK_Z
@@ -21,6 +22,9 @@ value class InSectionPosition(val index: Int) {
     fun minusY() = with(y = y - 1)
     fun plusZ() = with(z = z + 1)
     fun minusZ() = with(z = z - 1)
+    operator fun component1() = x
+    operator fun component2() = y
+    operator fun component3() = z
     override fun toString() = "s($x $y $z)"
     companion object {
         const val BITS_X = 4
