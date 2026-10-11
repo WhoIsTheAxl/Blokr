@@ -15,9 +15,9 @@ value class BlockPosition(val raw: Long) {
         require(x in -MAX_X..MAX_X && z in -MAX_Z..MAX_Z)
         require(y in MIN_Y..MAX_Y)
     }
-    val x: Int get() = ((raw ushr SHIFT_X).toInt() and MASK_X shl 6) shr 6
-    val y: Int get() = ((raw ushr SHIFT_Y).toInt() and MASK_Y shl 20) shr 20
-    val z: Int get() = ((raw ushr SHIFT_Z).toInt() and MASK_Z shl 6) shr 6
+    val x: Int get() = (((raw ushr SHIFT_X).toInt() and MASK_X) shl 6)) shr 6
+    val y: Int get() = (((raw ushr SHIFT_Y).toInt() and MASK_Y) shl 20)) shr 20
+    val z: Int get() = (((raw ushr SHIFT_Z).toInt() and MASK_Z) shl 6)) shr 6
     val chunkPosition: ChunkPosition get() = ChunkPosition(x shr 4, z shr 4)
     val inSectionPosition: InSectionPosition get() = InSectionPosition(x and 15, y and 15, z and 15)
     fun with(x: Int = this.x, y: Int = this.y, z: Int = this.z) = BlockPosition(x, y, z)
