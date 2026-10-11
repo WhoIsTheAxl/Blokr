@@ -29,6 +29,8 @@ value class InChunkPosition(val raw: Int) {
     fun minusY() = with(y = y - 1)
     fun plusZ() = with(z = z + 1)
     fun minusZ() = with(z = z - 1)
+    operator fun plus(other: InChunkPosition) =
+        InChunkPosition(x + other.x, y + other.y, z + other.z)
     operator fun component1() = x
     operator fun component2() = y
     operator fun component3() = z
