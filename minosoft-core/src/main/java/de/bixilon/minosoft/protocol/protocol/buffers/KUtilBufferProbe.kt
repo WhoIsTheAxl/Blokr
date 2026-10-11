@@ -11,7 +11,7 @@ object KUtilBufferProbe {
         output.writeVarInt(-1)
         output.writeInt(0x12345678)
         output.writeLong(0x123456789abcdefL)
-        val input = de.bixilon.kutil.buffer.bytes.`in`.InByteBuffer(output.toArray())
+        val input = de.bixilon.kutil.buffer.bytes.`in`.InByteBuffer(output.data.toArray())
         check(input.readVarInt() == 300)
         check(input.readVarInt() == -1)
         check(input.readInt() == 0x12345678)
