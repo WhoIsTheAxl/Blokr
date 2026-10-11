@@ -174,6 +174,15 @@ public final class MainActivity extends Activity {
                 report.append("\nMinosoft core linkage: FAIL");
             }
             try {
+                Diagnostics.info("WorldState", "Checking sparse world storage");
+                String result = MinosoftCoreProbe.checkWorldState();
+                Diagnostics.info("WorldState", result);
+                report.append("\n").append(result);
+            } catch (Throwable failure) {
+                Diagnostics.error("WorldState", "Portable world-state check failed", failure);
+                report.append("\nPortable world state: FAIL");
+            }
+            try {
                 Diagnostics.info("ProbeStage", "01 protocol begin");
                 String result = AndroidProtocolProbe.check();
                 Diagnostics.info("MinosoftProtocol", result);
