@@ -18,6 +18,7 @@ android {
     packaging {
         resources {
             excludes += "META-INF/INDEX.LIST"
+            merges += "META-INF/io.netty.versions.properties"
         }
     }
 
