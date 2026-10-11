@@ -31,6 +31,16 @@ value class BlockPosition(val raw: Long) {
     fun minusY() = plusY(-1)
     fun plusZ(delta: Int = 1) = with(z = z + delta)
     fun minusZ() = plusZ(-1)
+    operator fun plus(value: Int) = BlockPosition(x + value, y + value, z + value)
+    operator fun minus(value: Int) = BlockPosition(x - value, y - value, z - value)
+    operator fun times(value: Int) = BlockPosition(x * value, y * value, z * value)
+    operator fun div(value: Int) = BlockPosition(x / value, y / value, z / value)
+    operator fun unaryMinus() = BlockPosition(-x, -y, -z)
+    operator fun unaryPlus() = this
+    operator fun minus(other: InChunkPosition) = BlockPosition(x - other.x, y - other.y, z - other.z)
+    operator fun minus(other: InSectionPosition) = BlockPosition(x - other.x, y - other.y, z - other.z)
+    fun length2() = x.toLong() * x + y.toLong() * y + z.toLong() * z
+    infix fun and(mask: Int) = BlockPosition(x and mask, y and mask, z and mask)
     operator fun plus(other: InChunkPosition) = BlockPosition(x + other.x, y + other.y, z + other.z)
     operator fun plus(other: InSectionPosition) = BlockPosition(x + other.x, y + other.y, z + other.z)
     operator fun plus(other: BlockPosition) = BlockPosition(x + other.x, y + other.y, z + other.z)
@@ -54,6 +64,14 @@ value class BlockPosition(val raw: Long) {
         const val MIN_Y = -2048
         const val MAX_Y = 2047
         val EMPTY = BlockPosition(0, 0, 0)
+        fun of(chunk: ChunkPosition, inChunk: InChunkPosition) =
+            BlockPosition((chunk.x shl 4) or inChunk.x, inChunk.y, (chunk.z shl 4) or inChunk.z)
+        fun of(section: SectionPosition, inSection: InSectionPosition) =
+            BlockPosition((section.x shl 4) or inSection.x, (section.y shl 4) or inSection.z)
+        fun of(section: SectionPosition) =
+            BlockPosition(section.x shl 4, section.y shl 4, section.z shl 4)
+        fun of(chunk: ChunkPosition, sectionHeight: Int) =
+            BlockPosition(chunk.x shl 4, sectionHeight shl 4, chunk.z shl 4)
         fun of(chunk: ChunkPosition, sectionHeight: Int, inSection: InSectionPosition) =
             BlockPosition((chunk.x shl 4) or inSection.x, (sectionHeight shl 4) or inSection.y,
                 (chunk.z shl 4) or inSection.z)
