@@ -2,11 +2,11 @@ package com.blokr.app.graphics;
 
 import android.opengl.GLES30;
 import android.opengl.GLSurfaceView;
-import android.util.Log;
 
 import com.blokr.app.bridge.BridgeState;
 import com.blokr.app.bridge.MinosoftBridge;
 import com.blokr.app.bridge.MinosoftGraphicsRuntime;
+import com.blokr.app.diagnostic.Diagnostics;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -22,7 +22,7 @@ public final class BlokrRenderer implements GLSurfaceView.Renderer {
 
     @Override
     public void onSurfaceCreated(GL10 unused, EGLConfig config) {
-        Log.i(TAG, "OpenGL ES: " + GLES30.glGetString(GLES30.GL_VERSION));
+        Diagnostics.info(TAG, "Surface created; OpenGL ES: " + GLES30.glGetString(GLES30.GL_VERSION));
         GLES30.glClearColor(0.11f, 0.08f, 0.19f, 1.0f);
         MinosoftGraphicsRuntime graphics = MinosoftBridge.getInstance().graphics();
         if (graphics != null) graphics.onSurfaceCreated();
@@ -30,6 +30,7 @@ public final class BlokrRenderer implements GLSurfaceView.Renderer {
 
     @Override
     public void onSurfaceChanged(GL10 unused, int width, int height) {
+        Diagnostics.info(TAG, "Surface resized to " + width + "x" + height);
         this.width = width;
         this.height = height;
         GLES30.glViewport(0, 0, width, height);
