@@ -1,6 +1,6 @@
 package de.bixilon.minosoft.data.world.positions
 
-import de.bixilon.minosoft.data.world.chunk.ChunkUtil.isInViewDistance
+import de.bixilon.minosoft.data.world.chunk.ChunkUtil
 import org.junit.Assert.*
 import org.junit.Test
 
