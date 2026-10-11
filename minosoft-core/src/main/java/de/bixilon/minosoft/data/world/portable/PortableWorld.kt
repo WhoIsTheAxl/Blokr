@@ -38,6 +38,37 @@ class PortableWorld {
         return sections[sectionKey(x, y, z)]?.get(localIndex(x, y, z)) ?: 0
     }
 
+    /**
+     * Returns a defensive copy of one 16³ section, indexed as (y << 8) | (z << 4) | x.
+     * Zero represents air. Missing sections return an all-air array.
+     */
+    @Synchronized
+    fun sectionSnapshot(sectionX: Int, sectionY: Int, sectionZ: Int): IntArray {
+        val result = IntArray(ChunkSize.BLOCKS_PER_SECTION)
+        sections[SectionKey(sectionX, sectionY, sectionZ)]?.forEach { (index, stateId) ->
+            result[index] = stateId
+        }
+        return result
+    }
+
+    /**
+     * Atomically replace a section with a defensive copy of the supplied state IDs.
+     * An all-air section is removed rather than retained in memory.
+     */
+    @Synchronized
+    fun replaceSection(sectionX: Int, sectionY: Int, sectionZ: Int, states: IntArray) {
+        require(states.size == ChunkSize.BLOCKS_PER_SECTION) { "Expected 4096 block states" }
+        require(sectionY >= Math.floorDiv(ChunkSize.CHUNK_MIN_Y, 16)
+            && sectionY < Math.floorDiv(ChunkSize.CHUNK_MAX_Y, 16)) { "Section Y outside world range" }
+        require(states.all { it >= 0 }) { "Block state IDs must be nonnegative" }
+        val key = SectionKey(sectionX, sectionY, sectionZ)
+        val nonAir = HashMap<Int, Int>()
+        states.forEachIndexed { index, stateId ->
+            if (stateId != 0) nonAir[index] = stateId
+        }
+        if (nonAir.isEmpty()) sections.remove(key) else sections[key] = nonAir
+    }
+
     @Synchronized
     fun loadedSections(): Int = sections.size
 
