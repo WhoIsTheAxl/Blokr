@@ -8,6 +8,7 @@ import de.bixilon.minosoft.data.world.chunk.ChunkSize
 /** Upstream Minosoft packed 4/4/12-bit X/Z/Y in-chunk coordinates. */
 @JvmInline
 value class InChunkPosition(val raw: Int) {
+    constructor() : this(0, 0, 0)
     constructor(x: Int, y: Int, z: Int) : this(
         ((y and MASK_Y) shl SHIFT_Y) or (z shl SHIFT_Z) or x
     ) {
@@ -15,6 +16,12 @@ value class InChunkPosition(val raw: Int) {
         require(y >= ChunkSize.CHUNK_MIN_Y && y < ChunkSize.CHUNK_MAX_Y)
     }
 
+    fun modify(other: Int, component: Int, add: Int): InChunkPosition =
+        InChunkPosition((raw and other) or (((raw and component) + add) and component))
+    fun modifyY(add: Int) = modify(0xFF, MASK_Y shl SHIFT_Y, add)
+    fun plusX(delta: Int) = with(x = x + delta)
+    fun plusY(delta: Int) = with(y = y + delta)
+    fun plusZ(delta: Int) = with(z = z + delta)
     val x: Int get() = (raw ushr SHIFT_X) and MASK_X
     val y: Int get() = (((raw ushr SHIFT_Y) and MASK_Y) shl 20) shr 20
     val z: Int get() = (raw ushr SHIFT_Z) and MASK_Z
