@@ -49,6 +49,7 @@ import java.util.stream.Collectors
 
 plugins {
     kotlin("jvm") version "2.4.0"
+    id("com.android.application") version "8.11.1" apply false
     `jvm-test-suite`
     application
     id("com.github.ben-manes.versions") version "0.54.0"
