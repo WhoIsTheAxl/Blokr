@@ -84,8 +84,9 @@ public final class UIFactory {
         LinearLayout outer = new LinearLayout(context);
         outer.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
         int widthDp = context.getResources().getConfiguration().screenWidthDp;
-        int maxWidth = widthDp >= 600 ? 560 : widthDp >= 480 ? 440 : widthDp;
-        int horizontalMargin = dp(widthDp >= 600 ? 24 : 8);
+        int marginDp = widthDp >= 600 ? 24 : 8;
+        int maxWidth = widthDp >= 600 ? 560 : widthDp >= 480 ? 440 : Math.max(1, widthDp - 2 * marginDp);
+        int horizontalMargin = dp(marginDp);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 maxWidth > 0 ? dp(maxWidth) : ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
