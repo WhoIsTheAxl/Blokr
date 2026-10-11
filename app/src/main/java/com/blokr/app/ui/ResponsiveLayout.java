@@ -36,8 +36,8 @@ public final class ResponsiveLayout extends ViewGroup {
         if (widthMode == MeasureSpec.UNSPECIFIED)
             width = getPaddingLeft() + getPaddingRight() + minCellPx;
         int available = Math.max(0, width - getPaddingLeft() - getPaddingRight());
-        int proposed = LayoutPolicy.columns(mode, available / getResources().getDisplayMetrics().density > Integer.MAX_VALUE
-                ? Integer.MAX_VALUE : Math.round(available / getResources().getDisplayMetrics().density),
+        int proposed = LayoutPolicy.columns(mode,
+                Math.round(available / getResources().getDisplayMetrics().density),
                 Math.max(1, Math.round(minCellPx / getResources().getDisplayMetrics().density)), maxColumns);
         columns = mode == LayoutPolicy.Mode.HORIZONTAL
                 ? Math.max(1, Math.min(proposed, Math.max(1, getChildCount()))) : proposed;
