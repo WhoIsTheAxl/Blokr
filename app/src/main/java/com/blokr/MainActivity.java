@@ -11,6 +11,7 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Process;
 import com.blokr.app.bridge.NetworkTransportProbe;
 
 import com.blokr.app.bridge.MinosoftBridge;
@@ -25,10 +26,26 @@ import com.blokr.app.view.activities.GameActivity;
 
 /** Android launcher for the bridge and graphics bootstrap. */
 public final class MainActivity extends Activity {
+    private final Handler diagnosticHandler = new Handler(Looper.getMainLooper());
+    private final Runnable heartbeat = new Runnable() {
+        @Override public void run() {
+            Diagnostics.info("LauncherHeartbeat", "alive; pid=" + Process.myPid()
+                + "; finishing=" + isFinishing());
+            diagnosticHandler.postDelayed(this, 2000);
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Diagnostics.info("MainActivity", "Launcher created; bridge=" + MinosoftBridge.getInstance().getState());
+        Intent launchIntent = getIntent();
+        Diagnostics.info("LaunchPath", "pid=" + Process.myPid()
+            + "; taskId=" + getTaskId()
+            + "; savedState=" + (savedInstanceState != null)
+            + "; action=" + (launchIntent == null ? "null" : launchIntent.getAction())
+            + "; flags=" + (launchIntent == null ? "null" : Integer.toHexString(launchIntent.getFlags()))
+            + "; categories=" + (launchIntent == null ? "null" : launchIntent.getCategories()));
 
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
@@ -157,10 +174,13 @@ public final class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
-        Diagnostics.info("MainActivityLifecycle", "onResume");
+        Diagnostics.info("MainActivityLifecycle", "onResume; pid=" + Process.myPid());
+        diagnosticHandler.removeCallbacks(heartbeat);
+        diagnosticHandler.postDelayed(heartbeat, 2000);
     }
 
     @Override protected void onPause() {
+        diagnosticHandler.removeCallbacks(heartbeat);
         Diagnostics.info("MainActivityLifecycle", "onPause; finishing=" + isFinishing());
         super.onPause();
     }
@@ -171,6 +191,7 @@ public final class MainActivity extends Activity {
     }
 
     @Override protected void onDestroy() {
+        diagnosticHandler.removeCallbacks(heartbeat);
         Diagnostics.info("MainActivityLifecycle", "onDestroy; finishing=" + isFinishing()
             + "; changingConfigurations=" + isChangingConfigurations());
         super.onDestroy();
