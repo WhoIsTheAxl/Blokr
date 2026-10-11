@@ -10,6 +10,7 @@ import android.widget.TextView;
 
 import com.blokr.app.bridge.MinosoftBridge;
 import com.blokr.app.bridge.MinosoftCoreProbe;
+import com.blokr.app.diagnostic.Diagnostics;
 import com.blokr.app.view.activities.GameActivity;
 
 /** Android launcher for the bridge and graphics bootstrap. */
@@ -17,6 +18,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Diagnostics.info("MainActivity", "Launcher created; bridge=" + MinosoftBridge.getInstance().getState());
 
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
