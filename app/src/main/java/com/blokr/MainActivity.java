@@ -145,6 +145,34 @@ public final class MainActivity extends Activity {
             }, "Blokr-TCP-Probe").start();
         });
         layout.addView(connect);
+        Diagnostics.info("StartupStage", "Before setContentView");
         setContentView(layout);
+        Diagnostics.info("StartupStage", "After setContentView; launcher visible");
+    }
+
+    @Override protected void onStart() {
+        super.onStart();
+        Diagnostics.info("MainActivityLifecycle", "onStart");
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        Diagnostics.info("MainActivityLifecycle", "onResume");
+    }
+
+    @Override protected void onPause() {
+        Diagnostics.info("MainActivityLifecycle", "onPause; finishing=" + isFinishing());
+        super.onPause();
+    }
+
+    @Override protected void onStop() {
+        Diagnostics.info("MainActivityLifecycle", "onStop; finishing=" + isFinishing());
+        super.onStop();
+    }
+
+    @Override protected void onDestroy() {
+        Diagnostics.info("MainActivityLifecycle", "onDestroy; finishing=" + isFinishing()
+            + "; changingConfigurations=" + isChangingConfigurations());
+        super.onDestroy();
     }
 }
