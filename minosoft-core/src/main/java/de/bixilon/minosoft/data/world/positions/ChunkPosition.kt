@@ -9,7 +9,12 @@ import de.bixilon.minosoft.data.world.chunk.ChunkSize
 /** Upstream Minosoft packed 32+32-bit chunk coordinate representation. */
 @JvmInline
 value class ChunkPosition(val raw: Long) {
+    constructor() : this(0, 0)
     constructor(x: Int, z: Int) : this((z.toLong() shl SHIFT_Z) or (x.toLong() and 0xFFFFFFFFL))
+    fun modify(other: Long, component: Long, add: Long): ChunkPosition =
+        ChunkPosition((raw and other) or (((raw and component) + add) and component))
+    fun modifyX(add: Long) = modify(-0x100000000L, 0xFFFFFFFFL, add)
+    fun modifyZ(add: Long) = modify(0xFFFFFFFFL, -0x100000000L, add)
     val x: Int get() = raw.toInt()
     val z: Int get() = (raw ushr SHIFT_Z).toInt()
     fun with(x: Int = this.x, z: Int = this.z) = ChunkPosition(x, z)
@@ -35,6 +40,10 @@ value class ChunkPosition(val raw: Long) {
     operator fun component2() = z
     override fun toString() = "c($x $z)"
     companion object {
+        const val MAX_X = BlockPosition.MAX_X shr 4
+        const val MAX_Z = BlockPosition.MAX_Z shr 4
+        const val MASK_X = -1
+        const val MASK_Z = -1
         const val SHIFT_X = 0
         const val SHIFT_Z = 32
         const val BITS_X = 32
