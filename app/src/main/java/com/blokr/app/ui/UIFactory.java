@@ -39,6 +39,7 @@ public final class UIFactory {
         view.setTextSize(TypedValue.COMPLEX_UNIT_SP, sp);
         view.setTextColor(muted ? MUTED : TEXT);
         view.setGravity(Gravity.CENTER_VERTICAL);
+        view.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
         return view;
     }
 
@@ -49,6 +50,8 @@ public final class UIFactory {
         button.setAllCaps(false);
         button.setBackground(rounded(ACCENT, 12));
         button.setMinHeight(dp(48));
+        button.setMinimumWidth(dp(48));
+        button.setContentDescription(label);
         button.setOnClickListener(action);
         return button;
     }
