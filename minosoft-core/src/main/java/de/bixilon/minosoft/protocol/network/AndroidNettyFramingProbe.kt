@@ -1,5 +1,7 @@
 package de.bixilon.minosoft.protocol.network
 
+import de.bixilon.minosoft.protocol.network.network.client.netty.pipeline.length.LengthEncoder
+import de.bixilon.minosoft.protocol.network.network.client.netty.pipeline.length.LengthDecoder
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.embedded.EmbeddedChannel
@@ -54,8 +56,8 @@ object AndroidNettyFramingProbe {
 
     @JvmStatic
     fun check(): String {
-        val encoder = EmbeddedChannel(FrameEncoder())
-        val decoder = EmbeddedChannel(FrameDecoder())
+        val encoder = EmbeddedChannel(LengthEncoder(MAX_LENGTH))
+        val decoder = EmbeddedChannel(LengthDecoder(MAX_LENGTH))
         try {
             val packet = byteArrayOf(0, 1, 2, 127)
             check(encoder.writeOutbound(packet))
@@ -75,7 +77,7 @@ object AndroidNettyFramingProbe {
             } finally {
                 encoded.release()
             }
-            return "Netty packet pipeline: PASS (fragmented frame)"
+            return "Minosoft length pipeline: PASS (fragmented frame)"
         } finally {
             encoder.finishAndReleaseAll()
             decoder.finishAndReleaseAll()
