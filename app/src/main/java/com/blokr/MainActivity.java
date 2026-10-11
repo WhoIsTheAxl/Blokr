@@ -9,6 +9,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.blokr.app.bridge.MinosoftBridge;
+import com.blokr.app.bridge.MinosoftCoreProbe;
 import com.blokr.app.view.activities.GameActivity;
 
 /** Android launcher for the bridge and graphics bootstrap. */
@@ -25,7 +26,8 @@ public final class MainActivity extends Activity {
 
         TextView status = new TextView(this);
         status.setText("Blokr\nAndroid bootstrap ready\nMinosoft: "
-            + MinosoftBridge.getInstance().getState());
+            + MinosoftBridge.getInstance().getState()
+            + "\n" + MinosoftCoreProbe.check());
         status.setTextSize(22);
         status.setGravity(Gravity.CENTER);
         layout.addView(status);
