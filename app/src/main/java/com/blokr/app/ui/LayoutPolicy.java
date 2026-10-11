@@ -15,6 +15,18 @@ public final class LayoutPolicy {
         return Math.min(maxColumns, fitted);
     }
 
+    /** Fits columns including inter-column gaps; never requires a cell wider than the viewport. */
+    public static int columnsForPixels(Mode mode, int availablePx, int minCellPx,
+                                       int gapPx, int maxColumns) {
+        if (mode == null || availablePx < 0 || minCellPx <= 0 || gapPx < 0 || maxColumns <= 0)
+            throw new IllegalArgumentException("Invalid responsive dimensions");
+        if (mode == Mode.VERTICAL) return 1;
+        if (mode == Mode.HORIZONTAL) return maxColumns;
+        long perColumn = (long) minCellPx + gapPx;
+        long fitted = ((long) availablePx + gapPx) / perColumn;
+        return (int) Math.max(1L, Math.min((long) maxColumns, fitted));
+    }
+
     public static int cellWidth(int availablePx, int columns, int gapPx) {
         if (availablePx < 0 || columns <= 0 || gapPx < 0)
             throw new IllegalArgumentException("Invalid grid geometry");
