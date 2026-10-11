@@ -35,6 +35,17 @@ class WorldUpdateQueue(private val maxPending: Int = 1024) {
 
     @Synchronized fun size(): Int = pending.size
 
+    /** Capacity remaining without dropping or overwriting pending world updates. */
+    @Synchronized fun remainingCapacity(): Int = maxPending - pending.size
+
+    /** Non-throwing backpressure API for network consumers. */
+    @Synchronized
+    fun trySubmit(command: Command): Boolean {
+        if (pending.size >= maxPending) return false
+        submit(command)
+        return true
+    }
+
     /** Applies up to limit commands. Invalid commands are not removed. */
     @Synchronized
     fun drainInto(world: PortableWorld, limit: Int = Int.MAX_VALUE): Int {
