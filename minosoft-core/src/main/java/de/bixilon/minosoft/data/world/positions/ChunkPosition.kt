@@ -17,6 +17,16 @@ value class ChunkPosition(val raw: Long) {
     fun minusX() = with(x = x - 1)
     fun plusZ() = with(z = z + 1)
     fun minusZ() = with(z = z - 1)
+    fun plusX(delta: Int) = with(x = x + delta)
+    fun plusZ(delta: Int) = with(z = z + delta)
+    operator fun plus(value: Int) = ChunkPosition(x + value, z + value)
+    operator fun minus(value: Int) = ChunkPosition(x - value, z - value)
+    operator fun times(value: Int) = ChunkPosition(x * value, z * value)
+    operator fun div(value: Int) = ChunkPosition(x / value, z / value)
+    operator fun unaryMinus() = ChunkPosition(-x, -z)
+    operator fun unaryPlus() = this
+    infix fun and(mask: Int) = ChunkPosition(x and mask, z and mask)
+    fun blockPosition(position: InChunkPosition) = blockPosition(position.x, position.y, position.z)
     operator fun plus(other: ChunkPosition) = ChunkPosition(x + other.x, z + other.z)
     operator fun minus(other: ChunkPosition) = ChunkPosition(x - other.x, z - other.z)
     fun blockPosition(x: Int, y: Int, z: Int) =
