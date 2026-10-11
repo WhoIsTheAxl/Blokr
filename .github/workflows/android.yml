@@ -22,7 +22,7 @@ jobs:
       - name: Install required Android SDK packages
         run: sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
       - name: Run core JVM unit tests
-        run: bash ./gradlew :minosoft-core:testDebugUnitTest --stacktrace
+        run: bash ./gradlew :minosoft-engine:testDebugUnitTest --stacktrace
       - name: Build Android debug APK
         run: bash ./gradlew :app:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
