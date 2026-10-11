@@ -11,6 +11,7 @@ import android.widget.TextView;
 import com.blokr.app.bridge.MinosoftBridge;
 import com.blokr.app.bridge.MinosoftCoreProbe;
 import com.blokr.app.diagnostic.Diagnostics;
+import de.bixilon.minosoft.protocol.AndroidProtocolProbe;
 import com.blokr.app.view.activities.GameActivity;
 
 /** Android launcher for the bridge and graphics bootstrap. */
@@ -27,6 +28,8 @@ public final class MainActivity extends Activity {
         layout.setPadding(padding, padding, padding, padding);
 
         TextView status = new TextView(this);
+        String protocolStatus = AndroidProtocolProbe.check();
+        Diagnostics.info("MinosoftProtocol", protocolStatus);
         status.setText("Blokr\nAndroid bootstrap ready\nMinosoft: "
             + MinosoftBridge.getInstance().getState()
             + "\n" + MinosoftCoreProbe.check());
