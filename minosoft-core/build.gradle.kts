@@ -16,3 +16,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
+
+// Netty is the transport framework used by Minosoft's original network client.
+dependencies {
+    implementation("io.netty:netty-buffer:4.1.115.Final")
+    implementation("io.netty:netty-transport:4.1.115.Final")
+    implementation("io.netty:netty-codec:4.1.115.Final")
+}
