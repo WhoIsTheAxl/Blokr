@@ -12,7 +12,7 @@ class WorldPipelineTest {
 
     @Test fun paddedPaletteRoundTripsAcrossWordBoundaries() {
         for (bits in listOf(1, 4, 5, 6, 8, 13, 32)) {
-            val palette = intArrayOf(0, 7, 9, 13)
+            val palette = if (bits == 1) intArrayOf(0, 7) else intArrayOf(0, 7, 9, 13)
             val indices = IntArray(4096) { (it * 17 + it / 13) % palette.size }
             val packed = PalettedSectionDecoder.encode(bits, indices)
             val decoded = PalettedSectionDecoder.decode(bits, palette, packed)
