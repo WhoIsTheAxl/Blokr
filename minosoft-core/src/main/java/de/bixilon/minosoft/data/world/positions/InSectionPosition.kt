@@ -7,10 +7,16 @@ package de.bixilon.minosoft.data.world.positions
 /** Upstream Minosoft 12-bit YZX section position; index layout is unchanged. */
 @JvmInline
 value class InSectionPosition(val index: Int) {
+    constructor() : this(0, 0, 0)
     constructor(x: Int, y: Int, z: Int) : this((y shl SHIFT_Y) or (z shl SHIFT_Z) or x) {
         require(x in 0..15 && y in 0..15 && z in 0..15)
     }
     init { require(index in 0..4095) { "section index out of range: $index" } }
+    fun plusX(delta: Int) = with(x = x + delta)
+    fun plusY(delta: Int) = with(y = y + delta)
+    fun plusZ(delta: Int) = with(z = z + delta)
+    operator fun plus(other: InSectionPosition) =
+        InSectionPosition(x + other.x, y + other.y, z + other.z)
     val x: Int get() = (index ushr SHIFT_X) and MASK_X
     val y: Int get() = (index ushr SHIFT_Y) and MASK_Y
     val z: Int get() = (index ushr SHIFT_Z) and MASK_Z
