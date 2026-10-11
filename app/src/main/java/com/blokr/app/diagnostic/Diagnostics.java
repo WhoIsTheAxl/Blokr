@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.BufferedWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -22,6 +23,7 @@ public final class Diagnostics {
     private static File directory;
     private static File current;
     private static volatile boolean initialized;
+    private static volatile boolean crashHandlerInstalled;
 
     private Diagnostics() {}
 
@@ -71,11 +73,13 @@ public final class Diagnostics {
     private static synchronized void append(String level, String tag, String message, Throwable cause) {
         if (!initialized || current == null) return;
         rotateIfNeeded();
-        try (PrintWriter writer = new PrintWriter(new FileWriter(current, true))) {
+        try (PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter(current, true)))) {
             String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US).format(new Date());
             writer.printf("%s [%s] [%s] [thread=%s] %s%n",
                 timestamp, level, tag, Thread.currentThread().getName(), message);
             if (cause != null) cause.printStackTrace(writer);
+            writer.flush();
+            if (writer.checkError()) Log.e(TAG, "Diagnostic log write failed");
         } catch (IOException e) {
             Log.e(TAG, "Failed to write diagnostic log", e);
         }
@@ -88,11 +92,18 @@ public final class Diagnostics {
         if (!current.renameTo(previous)) Log.w(TAG, "Unable to rotate diagnostic log");
     }
 
-    public static void installCrashHandler() {
+    public static synchronized void installCrashHandler() {
+        if (crashHandlerInstalled) return;
+        crashHandlerInstalled = true;
         Thread.UncaughtExceptionHandler previous = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler((thread, error) -> {
-            error("UncaughtException", "Fatal error on thread " + thread.getName(), error);
-            if (previous != null) previous.uncaughtException(thread, error);
+            try {
+                error("UncaughtException", "Fatal error on thread " + thread.getName(), error);
+            } catch (Throwable loggingFailure) {
+                Log.e(TAG, "Crash diagnostics failed", loggingFailure);
+            } finally {
+                if (previous != null) previous.uncaughtException(thread, error);
+            }
         });
     }
 }
