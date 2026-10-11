@@ -165,6 +165,15 @@ public final class MainActivity extends Activity {
             StringBuilder report = new StringBuilder("Blokr\nAndroid bootstrap ready\nMinosoft: ")
                 .append(MinosoftBridge.getInstance().getState());
             try {
+                Diagnostics.info("CoreIntegration", "Checking original Minosoft Kotlin class linkage");
+                String result = MinosoftCoreProbe.check();
+                Diagnostics.info("CoreIntegration", result);
+                report.append("\n").append(result);
+            } catch (Throwable failure) {
+                Diagnostics.error("CoreIntegration", "Minosoft core linkage failed", failure);
+                report.append("\nMinosoft core linkage: FAIL");
+            }
+            try {
                 Diagnostics.info("ProbeStage", "01 protocol begin");
                 String result = AndroidProtocolProbe.check();
                 Diagnostics.info("MinosoftProtocol", result);
