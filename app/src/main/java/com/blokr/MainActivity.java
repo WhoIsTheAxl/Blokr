@@ -14,6 +14,8 @@ import android.os.SystemClock;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
+import android.util.Log;
+import android.view.View;
 import com.blokr.app.bridge.NetworkTransportProbe;
 
 import com.blokr.app.bridge.MinosoftBridge;
@@ -134,6 +136,18 @@ public final class MainActivity extends Activity {
         Diagnostics.info("StartupStage", "04 before setContentView");
         setContentView(scroll);
         Diagnostics.info("StartupStage", "05 after setContentView");
+        scroll.getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
+            private boolean first = true;
+            @Override public boolean onPreDraw() {
+                if (first) {
+                    first = false;
+                    Diagnostics.info("RenderStage", "first pre-draw; attached=" + scroll.isAttachedToWindow());
+                    scroll.getViewTreeObserver().removeOnPreDrawListener(this);
+                }
+                return true;
+            }
+        });
+        scroll.post(() -> Diagnostics.info("RenderStage", "view posted callback; shown=" + scroll.isShown()));
         startProtocolDiagnostics(status);
     }
 
@@ -198,6 +212,74 @@ public final class MainActivity extends Activity {
                 Diagnostics.info("StartupStage", "09 diagnostics UI update completed");
             });
         }, "Blokr-Protocol-Diagnostics").start();
+    }
+
+
+    private void traceTermination(String method) {
+        Diagnostics.warn("ActivityTermination", method + "; pid=" + Process.myPid()
+            + "; task=" + getTaskId() + "; isTaskRoot=" + isTaskRoot()
+            + "; stack=" + Log.getStackTraceString(new Throwable("Termination call site")));
+    }
+
+    @Override public void finish() {
+        traceTermination("finish()");
+        super.finish();
+    }
+
+    @Override public void finishAffinity() {
+        traceTermination("finishAffinity()");
+        super.finishAffinity();
+    }
+
+    @Override public void finishAndRemoveTask() {
+        traceTermination("finishAndRemoveTask()");
+        super.finishAndRemoveTask();
+    }
+
+    @Override public void onBackPressed() {
+        Diagnostics.info("ActivityInput", "onBackPressed");
+        super.onBackPressed();
+    }
+
+    @Override protected void onUserLeaveHint() {
+        Diagnostics.info("MainActivityLifecycle", "onUserLeaveHint");
+        super.onUserLeaveHint();
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        Diagnostics.info("LaunchPath", "onNewIntent; action=" + intent.getAction()
+            + "; flags=" + Integer.toHexString(intent.getFlags()));
+    }
+
+    @Override public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        Diagnostics.info("WindowStage", "focus=" + hasFocus + "; finishing=" + isFinishing());
+    }
+
+    @Override public void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        Diagnostics.info("WindowStage", "decor attached");
+    }
+
+    @Override public void onDetachedFromWindow() {
+        Diagnostics.info("WindowStage", "decor detached");
+        super.onDetachedFromWindow();
+    }
+
+    @Override public void onTrimMemory(int level) {
+        Diagnostics.warn("MemoryStage", "onTrimMemory level=" + level);
+        super.onTrimMemory(level);
+    }
+
+    @Override public void onLowMemory() {
+        Diagnostics.warn("MemoryStage", "onLowMemory");
+        super.onLowMemory();
+    }
+
+    @Override protected void onSaveInstanceState(Bundle outState) {
+        Diagnostics.info("MainActivityLifecycle", "onSaveInstanceState");
+        super.onSaveInstanceState(outState);
     }
 
     @Override protected void onStart() {
