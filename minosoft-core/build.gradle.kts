@@ -19,6 +19,8 @@ android {
 
 // Netty is the transport framework used by Minosoft's original network client.
 dependencies {
+    // Original Minosoft packet buffers extend KUtil buffer implementations.
+    implementation("de.bixilon:kutil:1.31")
     implementation("io.netty:netty-buffer:4.1.115.Final")
     implementation("io.netty:netty-transport:4.1.115.Final")
     implementation("io.netty:netty-codec:4.1.115.Final")
