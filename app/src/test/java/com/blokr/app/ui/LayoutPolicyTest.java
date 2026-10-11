@@ -21,6 +21,14 @@ public class LayoutPolicyTest {
         assertEquals(0, LayoutPolicy.cellWidth(10, 3, 20));
     }
 
+    @Test public void adaptiveColumnsRespectGapsAndNarrowWidths() {
+        assertEquals(1, LayoutPolicy.columnsForPixels(LayoutPolicy.Mode.ADAPTIVE, 0, 180, 12, 3));
+        assertEquals(1, LayoutPolicy.columnsForPixels(LayoutPolicy.Mode.ADAPTIVE, 370, 180, 12, 3));
+        assertEquals(2, LayoutPolicy.columnsForPixels(LayoutPolicy.Mode.ADAPTIVE, 372, 180, 12, 3));
+        assertEquals(3, LayoutPolicy.columnsForPixels(LayoutPolicy.Mode.ADAPTIVE, 900, 180, 12, 3));
+        assertEquals(1, LayoutPolicy.columnsForPixels(LayoutPolicy.Mode.VERTICAL, 900, 180, 12, 3));
+    }
+
     @Test public void invalidInputsFailFast() {
         try {
             LayoutPolicy.columns(LayoutPolicy.Mode.ADAPTIVE, 320, 0, 3);
