@@ -69,107 +69,18 @@ public final class MainActivity extends Activity {
             Diagnostics.error("MainActivity", "Launcher infrastructure failed", failure);
             throw new IllegalStateException("Launcher infrastructure failed", failure);
         }
-        LinearLayout layout = uiFactory.column();
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setGravity(Gravity.CENTER);
-        int padding = (int) (24 * getResources().getDisplayMetrics().density);
-        layout.setPadding(padding, padding, padding, padding);
-
-        ImageView logo = new ImageView(this);
-        logo.setImageResource(R.drawable.blokr_logo);
-        int logoSize = (int) (96 * getResources().getDisplayMetrics().density);
-        LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(logoSize, logoSize);
-        logoParams.gravity = Gravity.CENTER_HORIZONTAL;
-        logoParams.bottomMargin = (int) (12 * getResources().getDisplayMetrics().density);
-        layout.addView(logo, logoParams);
-
-        TextView status = new TextView(this);
-        status.setText("Blokr\nAndroid bootstrap ready\nMinosoft: "
-            + MinosoftBridge.getInstance().getState()
-            + "\nProtocol diagnostics: running in background...");
-        Diagnostics.info("StartupStage", "02 status view initialized; probes deferred");
-        status.setTextSize(22);
-        status.setGravity(Gravity.CENTER);
-        layout.addView(status);
-
-        Button graphics = new Button(this);
-        graphics.setText("Test OpenGL ES 3.0");
-        graphics.setOnClickListener(v ->
-            startActivity(new Intent(this, GameActivity.class)));
-        layout.addView(graphics);
-        EditText host = new EditText(this);
-        host.setSingleLine(true);
-        host.setHint("Server hostname");
-        layout.addView(host);
-
-        EditText port = new EditText(this);
-        port.setSingleLine(true);
-        port.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        port.setText("25565");
-        layout.addView(port);
-
-        TextView networkStatus = new TextView(this);
-        networkStatus.setText("TCP diagnostic only — no Minecraft handshake");
-        layout.addView(networkStatus);
-
-        Button connect = new Button(this);
-        connect.setText("Test TCP Connection");
-        connect.setOnClickListener(v -> {
-            final String target = host.getText().toString().trim();
-            final String portText = port.getText().toString().trim();
-            final int targetPort;
-            try {
-                targetPort = Integer.parseInt(portText);
-                if (targetPort < 1 || targetPort > 65535) throw new NumberFormatException();
-                if (target.isEmpty()) throw new IllegalArgumentException("Enter a hostname");
-            } catch (RuntimeException invalid) {
-                networkStatus.setText("Enter a valid hostname and port (1–65535)");
-                return;
-            }
-            connect.setEnabled(false);
-            networkStatus.setText("Connecting...");
-            Handler main = new Handler(Looper.getMainLooper());
-            new Thread(() -> {
-                String result;
-                try {
-                    result = NetworkTransportProbe.connect(target, targetPort, 5000);
-                    Diagnostics.info("NetworkProbe", "TCP connection succeeded; port=" + targetPort);
-                } catch (Exception failure) {
-                    result = "TCP connection failed: " + failure.getClass().getSimpleName();
-                    Diagnostics.warn("NetworkProbe", result);
-                }
-                final String display = result;
-                main.post(() -> {
-                    networkStatus.setText(display);
-                    connect.setEnabled(true);
-                });
-            }, "Blokr-TCP-Probe").start();
-        });
-        layout.addView(connect);
-        Diagnostics.info("StartupStage", "03 controls created; attaching scroll container");
-        ScrollView scroll = uiFactory.page();
-        scroll.setFillViewport(true);
-        uiFactory.pageContent(scroll, layout);
-        Diagnostics.info("StartupStage", "04 before setContentView");
-        uiManager.register("launcher", factory -> scroll);
+        com.blokr.app.ui.MinecraftLauncherView launcher = new com.blokr.app.ui.MinecraftLauncherView(this);
+        TextView status = launcher.diagnosticsView();
+        View launcherView = launcher.create();
+        Diagnostics.info("StartupStage", "03 Minecraft-inspired launcher created");
+        uiManager.register("launcher", factory -> launcherView);
         if (savedInstanceState != null && "launcher".equals(savedInstanceState.getString("blokr.ui.current"))) {
             uiManager.restoreState(savedInstanceState);
         } else {
             uiManager.show("launcher");
         }
         Diagnostics.info("StartupStage", "05 after setContentView");
-        scroll.getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
-            private boolean first = true;
-            @Override public boolean onPreDraw() {
-                if (first) {
-                    first = false;
-                    Diagnostics.info("RenderStage", "first pre-draw; attached=" + scroll.isAttachedToWindow());
-                    scroll.getViewTreeObserver().removeOnPreDrawListener(this);
-                }
-                return true;
-            }
-        });
-        scroll.post(() -> Diagnostics.info("RenderStage", "view posted callback; shown=" + scroll.isShown()));
+        launcherView.post(() -> Diagnostics.info("RenderStage", "launcher shown=" + launcherView.isShown()));
         Diagnostics.info("StartupStage", "Protocol diagnostics scheduled for +5000ms");
         diagnosticHandler.postDelayed(() -> {
             if (!isFinishing() && !isDestroyed()) {
