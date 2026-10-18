@@ -13,10 +13,11 @@ import javax.microedition.khronos.opengles.GL10;
 
 /**
  * EGL lifecycle adapter only. Minosoft owns all game rendering.
- * The clear below is a placeholder until a graphics runtime is attached.
+ * Until a graphics runtime is attached, renders a local PortableWorld demo.
  */
 public final class BlokrRenderer implements GLSurfaceView.Renderer {
     private static final String TAG = "BlokrRenderer";
+    private final PortableWorldRenderer worldPreview = new PortableWorldRenderer();
     private volatile int width;
     private volatile int height;
 
@@ -26,6 +27,7 @@ public final class BlokrRenderer implements GLSurfaceView.Renderer {
         GLES30.glClearColor(0.11f, 0.08f, 0.19f, 1.0f);
         MinosoftGraphicsRuntime graphics = MinosoftBridge.getInstance().graphics();
         if (graphics != null) graphics.onSurfaceCreated();
+        else worldPreview.onSurfaceCreated();
     }
 
     @Override
@@ -36,6 +38,7 @@ public final class BlokrRenderer implements GLSurfaceView.Renderer {
         GLES30.glViewport(0, 0, width, height);
         MinosoftGraphicsRuntime graphics = MinosoftBridge.getInstance().graphics();
         if (graphics != null) graphics.onSurfaceChanged(width, height);
+        else worldPreview.onSurfaceChanged(width, height);
     }
 
     @Override
@@ -45,7 +48,7 @@ public final class BlokrRenderer implements GLSurfaceView.Renderer {
         if (graphics != null && bridge.getState() == BridgeState.RUNNING) {
             graphics.renderFrame();
         } else {
-            GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT | GLES30.GL_DEPTH_BUFFER_BIT);
+            worldPreview.renderFrame();
         }
     }
 
